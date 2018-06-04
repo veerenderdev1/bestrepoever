@@ -1,0 +1,40 @@
+trigger CaseHandledByUserTrigger on Case (before update, after update) {
+    
+    if(Trigger.isBefore && Trigger.isUpdate){
+        Set<id> cid = new Set<id>();
+        for(Case cs : Trigger.new){ 
+            cid.add(cs.id);
+            if(cs.CaseHandledDate__c == null){
+                cs.CaseHandledDate__c = system.now();  
+            }
+            if(cs.CaseHandledDate__c != null){
+                cs.CaseHandledDate__c = system.now(); 
+            }
+            system.debug('***'+cs.LastModifiedDate+'****'+cs.CreatedDate+'***'+cs.First_Response_time__c);
+            
+            //Changes made for First_Response_time__c, which was updated by workflow
+            if(cs.LastModifiedDate != cs.CreatedDate && cs.First_Response_time__c == Null){
+                cs.First_Response_time__c = System.now();
+                system.debug('First_Response_time__c:'+cs.First_Response_time__c);
+            }
+            
+        }
+        //Changes made for Email_Status__c, which was updated by workflow
+        List<Case> caseList = [select id, Email_Status__c, (Select id, status, Incoming from EmailMessages) from case where id =:cid];
+        for(Case ss: caseList){
+            for(EmailMessage em: ss.EmailMessages){
+                if(em.status == 'New' || em.status =='Sent'){
+                    ss.Email_Status__c = 'Email Sent';
+                    system.debug('Email Sent:'+ss.Email_Status__c);
+                }
+                if(em.Incoming == true){
+                    ss.Email_Status__c = 'Email Received';
+                    system.debug('Email Sent:'+ss.Email_Status__c);
+                }
+            }
+        }
+    }
+    if(Trigger.isAfter && Trigger.isUpdate){
+        CaseHandledByUsers.CasesHandledBy(Trigger.new);
+    }
+}

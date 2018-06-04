@@ -3,9 +3,9 @@ public class CaseHandledByUsers {
     public static void CasesHandledBy(List<Case> newList){
         CaseHandledByUser__c [] chu = new  CaseHandledByUser__c[0];
         List<CaseHandledByUser__c> clist = [SELECT Case_Number__c,Case_Handled_By_User__c,CaseHandledDate__c from CaseHandledByUser__c 
-                                            where Case_Handled_By_User__c =:UserInfo.getName()];
+                                            where Case_Handled_By_User__c =:UserInfo.getName()  Order By CaseHandledDate__c desc limit 50];
         
-        System.debug('Clist values:'+clist);        
+        System.debug('Clist values:'+clist); 
         User u = [select id, name from user where  id = :UserInfo.getUserId()]; 
         
         for(Case c2: newList){ 
@@ -17,7 +17,7 @@ public class CaseHandledByUsers {
             if(!clist.isEmpty()){ 
                 for(CaseHandledByUser__c c3: clist){
                     Boolean found = false;
-                    for(Integer i=0; i< clist.size(); i++){
+                    for(Integer i =0; i< clist.size(); i++){
                         
                         String myCaseNumber2 = String.valueOf(c2.caseNumber);
                         Date d1 = DateTime.valueOf(c2.CaseHandledDate__c).date();

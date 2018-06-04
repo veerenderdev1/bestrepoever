@@ -1,0 +1,105 @@
+@isTest(SeeAllData = false)
+public class CasesHandledByUserTest { 
+    @isTest
+    public static void CasesHandledByTestMethod(){
+        List<Case> newList = new List<Case>();
+        CaseHandledByUser__c [] ch = new  CaseHandledByUser__c[0];
+        List<CaseHandledByUser__c> clst = new List<CaseHandledByUser__c>();
+        
+        Profile p = [SELECT Id FROM Profile WHERE Name='System Administrator' limit 1];
+        
+        //Create  & Insert Test User
+        User u2 = new User(Alias = 'standt', Email='standarduser@sureswipe.com',
+                           EmailEncodingKey='UTF-8', LastName='Testing', FirstName='Testing2',LanguageLocaleKey='en_US',
+                           LocaleSidKey='en_US', ProfileId = p.Id,
+                           TimeZoneSidKey='America/Los_Angeles', UserName='standarduser@sureswipe.com'); 
+        
+        insert u2;
+        
+        Case cs = new Case();
+        cs.Install_Type__c = 'Fixed';
+        cs.Type = 'Install';
+        cs.Status = '01-New';
+        cs.Subject = 'Test1';
+        cs.Description = 'SampleTest';
+        cs.Case_Handled_By_User__c = ' '; 
+        cs.CaseHandledDate__c = null;
+        cs.First_Response_time__c = null;
+        cs.Email_Status__c = '';
+        insert cs;
+        
+        if(cs.CaseHandledDate__c == null){
+            cs.CaseHandledDate__c = System.now();
+            update cs;
+        }
+        if(cs.CaseHandledDate__c != null){
+            cs.CaseHandledDate__c = System.now();
+            update cs;
+        }
+        
+        cs.First_Response_time__c = datetime.newInstance(2018, 01, 17, 12, 30, 0);
+        update cs;
+        
+        //Insert emailmessage for case
+        EmailMessage email = new EmailMessage();
+        email.FromAddress = 'test@abc.org';
+        email.Incoming = True;
+        email.ToAddress= 'test@xyz.org';
+        email.Subject = 'Test email';
+        email.HtmlBody = 'Test email body';
+        email.ParentId = cs.Id; 
+        //email.status = 'Sent';
+        insert email;
+        
+         clst = [SELECT Case_Number__c,Case_Handled_By_User__c, CaseHandledDate__c from CaseHandledByUser__c 
+                where Case_Handled_By_User__c =:u2.name limit 1];
+        
+        if(clst.isEmpty()){ 
+            system.debug('**');
+            ch.add(new CaseHandledByUser__c(Case_Handled_By_User__c = 'veerender munavath',
+                                            Case_Number__c = '012345',
+                                            CaseHandledDate__c = datetime.newInstance(2018, 01, 16, 10,30, 0)));
+        }
+        
+        User u =[select id, name from User where id=:u2.id];
+        
+        if(!clst.isEmpty()){    
+            for(Case c2: newList){
+                     for(CaseHandledByUser__c c3: clst){
+                        Boolean found = false;
+                        for(Integer i=0; i< clst.size(); i++){
+                            String myCaseNumber2 = String.valueOf(c2.caseNumber);
+                            if(myCaseNumber2.Equals(clst[i].Case_Number__c)){
+                                found=true;
+                                break;
+                            } 
+                        } 
+                        if(!found){
+                            ch.add(new CaseHandledByUser__c(Case_Handled_By_User__c = u.name,Case_Number__c = c2.caseNumber,
+                                                            CaseHandledDate__c = c2.CaseHandledDate__c));
+                        } 
+                        break;
+                    }
+                    for(CaseHandledByUser__c c3: clst){
+                        if(c2.caseNumber == c3.Case_Number__c){
+                            if(c3.Case_Handled_By_User__c.equals(u.Name)){
+                                if(c2.CaseHandledDate__c.date() != c3.CaseHandledDate__c.date() ){
+                                    ch.add(new CaseHandledByUser__c(Case_Handled_By_User__c = u.name, Case_Number__c = c2.caseNumber,
+                                                                    CaseHandledDate__c = c2.CaseHandledDate__c));
+                                }
+                            } 
+                        }
+                        if(c2.caseNumber == c3.Case_Number__c){
+                            if(!c3.Case_Handled_By_User__c.equals(u.Name)){
+                                ch.add(new CaseHandledByUser__c(Case_Handled_By_User__c = u.name, Case_Number__c = c2.caseNumber,
+                                                                CaseHandledDate__c = c2.CaseHandledDate__c));
+                            }
+                        }
+                    }
+             }
+        }
+        if(!ch.isEmpty()){ 
+            insert ch;
+        }
+    }
+}

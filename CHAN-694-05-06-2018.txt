@@ -1,0 +1,6 @@
+
+"CHAN-694"
+1. A new field "Total 4-week revenue" in customer detail on customer level in SF.
+2. The field should be sum of values of 4-week revenue amounts of opportunities in 52-installed stage.
+3. This field should auto calculate whenever a opp changes stage to 52-installed from its previous stage by adding up amounts 
+and also deduct an opp 4-week revenue field amount from this total if that opp moves to 60-closed.

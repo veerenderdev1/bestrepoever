@@ -1,0 +1,658 @@
+public without sharing class EmailNotificationHelper 
+{
+
+    public static final Integer EMAIL_TO_LIMIT = 25;
+
+    public Contact noReplyContact;
+    public Map<Id,Set<String>> accountToRecipients;
+    public String globalErrorMessage;
+    public Boolean hadErrorTest;
+    
+    
+    public Class EmailNotificationClass
+    {
+        public String objectType;
+        public Id objectId;
+        public Id ownerId;
+        public Id templateId;
+        public Id accountId;
+        public String errorMessage;
+        public Set<String> bccEmailList;
+        
+        public EmailNotificationClass(String objtype, Id oId, Id ownId, Id tId, Id aId, String bccEmailString)
+        {
+            objectType = objtype;
+            objectId = oId;
+            ownerId = ownId;
+            templateId = tId;
+            accountId = aId;
+            errorMessage = '';
+            bccEmailList = new Set<String>();
+            if(bccEmailString != null && bccEmailString.contains(','))
+            {
+                System.debug('*****1*******');
+                System.debug('@@@ COMMA');
+                bccEmailList.addAll(EmailNotificationHelper.getValidEmailAddressesFromString(bccEmailString,','));
+            }
+            else
+            {
+                System.debug('@@@ SEMI-COLON');
+                bccEmailList.addAll(EmailNotificationHelper.getValidEmailAddressesFromString(bccEmailString,';'));
+            }            
+        }
+    }
+    
+    public String notify(List<EmailNotificationClass> notifications)
+    {   
+        System.debug('*****1*******');
+        globalErrorMessage = '';                                 
+        Boolean hadError = false;   
+        
+        //Just for testing
+        if(hadErrorTest != null && hadErrorTest == true)
+        {
+            hadError = true;            
+        }
+                
+        if(notifications != null && notifications.size() > 0)
+        {
+            Set<Id> accountIds = new Set<Id>();
+            for(EmailNotificationClass notification : notifications)
+            {
+                accountIds.add(notification.accountId);
+                system.debug('****'+accountIds);
+            }
+        
+            Map<Id,String> accountIdToErrorMessage = setAccountToRecipients(accountIds);  
+            system.debug('****'+accountIdToErrorMessage);
+            
+            for(EmailNotificationClass notification : notifications)
+            {
+                if(accountIdToErrorMessage.containsKey(notification.accountId))
+                {
+                    notification.errorMessage += accountIdToErrorMessage.get(notification.accountId);
+                    hadError = true;
+                }
+                
+                Set<String> recipients = getRecipients(notification.accountId);
+                system.debug('****'+recipients);
+                
+                //If there are no recipients then we can't notify anyone
+                if(recipients == null || recipients.size() == 0)
+                {
+                    notification.errorMessage += 'No recipients could be found for this notification';
+                    hadError = true;
+                }
+                else //Try to notify people
+                {
+                    try
+                    { 
+                        system.debug('-----recipients----'+recipients+'----bcc---'+ notification.bccEmailList);                     
+                        sendEmailTemplate(recipients, notification.bccEmailList, notification.objectId, notification.templateId, notification.ownerId);
+                    }
+                    catch (Exception exp)
+                    {
+                        notification.errorMessage += exp.getMessage();
+                        hadError = true;
+                    }
+                }
+            }
+        }
+        else
+        {
+            //Nothing to be emailed, it's not an error.
+            System.debug('@@@ INFO: No notifications were even passed into the method public String notify(List<EmailNotificationClass> notifications) so nothing will be sent.');
+        }
+        
+        if(hadError)
+        {
+            globalErrorMessage = 'There were one or more errors that occurred during auto-notification.\n';
+            for(EmailNotificationClass notification : notifications)
+            {
+                if(notification.errorMessage != null && notification.errorMessage.length() > 2)
+                {
+                    globalErrorMessage += 'For the record of type ' + notification.objectType + ' with the Id of ' + notification.objectId + ' there were these errors:\n';
+                    globalErrorMessage += notification.errorMessage;
+                }
+            }
+            
+            //TODO Email the globalErrorMessage;
+            if(globalErrorMessage != null && globalErrorMessage.length() > 2)
+            {
+                Set<String> recipientsError = null;
+                Id targetUserId = null;
+                
+                List<Apex_Error_Emails__c> emailErrorsTo = Apex_Error_Emails__c.getall().values();
+                if(emailErrorsTo != null && emailErrorsTo.size() > 0)
+                {
+                    recipientsError = new Set<String>();
+                    for(Apex_Error_Emails__c emailSetting : emailErrorsTo)
+                    {
+                        if(emailSetting.Email_Address__c != null)
+                        {
+                            recipientsError.add(emailSetting.Email_Address__c);
+                        }
+                    }
+                }
+                
+                //If no custom settings then use the logged in user and send errors there
+                if(recipientsError == null || recipientsError.size() == 0)
+                {
+                    targetUserId = UserInfo.getUserId();
+                }               
+                System.debug('@@@ GLOBAL NOTIFY ERROR to be emailed: ' + globalErrorMessage);
+                sendEmailText(recipientsError, targetUserId, 'Salesforce Custom Notification Error', globalErrorMessage);               
+            }           
+        }
+        
+        //Clean up the bogus contact if created
+        if(noReplyContact != null && noReplyContact.Id != null) delete noReplyContact;
+        
+        return globalErrorMessage;          
+    }
+    
+    //Loop over cases and find if any emails need to be sent
+    public String notifyOnCase(List<Case> newCases, Map<Id,Case> oldCaseMap, Boolean isTest)
+    {
+        System.debug('*****1*******');
+        List<EmailNotificationClass> casesNeedingNotification = new List<EmailNotificationClass>();
+        
+        for(Case c : newCases)
+        {
+            if(c.Email_Notification_Template_Id__c != null)
+            {
+                system.debug('*****'+c.Email_Notification_Template_Id__c);
+                system.debug('*****'+Trigger.isUpdate);
+                
+                if(isTest || Trigger.isInsert || (Trigger.isUpdate && c.Email_Notification_Template_Id__c != oldCaseMap.get(c.Id).Email_Notification_Template_Id__c))
+               {
+                   system.debug('******'); 
+                   //We now know we have to send an email 
+                    string bccEmail = c.bcc_Email_On_Notification__c;
+                    if(bccEmail  == null || bccEmail  =='')
+                    {
+                        if(c.Opportunity__c != null)
+                        {
+                            string Ownerid= [Select Opportunity__r.OwnerId from Case Where id=:c.id].Opportunity__r.OwnerId;
+                            string opEmail = [Select Email from User where Id=:Ownerid].Email;
+                            bccEmail  = opEmail+';';
+                        }
+                    }
+                    else
+                    {
+                        if(c.Opportunity__c != null)
+                        {
+                            string Ownerid= [Select Opportunity__r.OwnerId from Case Where id=:c.id].Opportunity__r.OwnerId;
+                            string opEmail = [Select Email from User where Id=:Ownerid].Email;
+                            if(bccEmail.contains(','))
+                                bccEmail  = opEmail+',';
+                            else
+                                bccEmail  = opEmail+';';
+                        }
+                    }                                    
+                    casesNeedingNotification.add(new EmailNotificationClass('Case', c.Id,c.OwnerId, c.Email_Notification_Template_Id__c,c.AccountId,bccEmail));
+               }
+            }
+        }
+        if(casesNeedingNotification != null && casesNeedingNotification.size() > 0)
+        {
+            return notify(casesNeedingNotification);
+        }   
+        return null;                                                        
+    }
+    
+    public String notifyOnInstallation(Id installationRecordId)
+    {
+        return notifyOnInstallation(installationRecordId, null);
+    }
+    
+    //Installation Record Notification
+    public String notifyOnInstallation(Id installationRecordId, Id emailTemplateId)
+    {
+        if(installationRecordId == null) return 'Can not send notification because installation record Id is blank.';
+        
+        List<EmailNotificationClass> needingNotification = new List<EmailNotificationClass>();
+        
+        Installation__c installRecord = [SELECT Id, Install_Case__r.OwnerId, Email_Notification_Template_Id__c, Site__c, bcc_Email_On_Notification__c
+                                         FROM Installation__c
+                                         WHERE Id = :installationRecordId];
+        
+        if(installRecord == null) return 'Can not send notification because installation record was not found for id = ' + installationRecordId;
+        
+        //We now know we have to send an email
+        if(emailTemplateId == null) emailTemplateId = installRecord.Email_Notification_Template_Id__c;                                          
+        needingNotification.add(new EmailNotificationClass('Installation', installRecord.Id, installRecord.Install_Case__r.OwnerId, emailTemplateId, installRecord.Site__c, installRecord.bcc_Email_On_Notification__c));
+              
+        if(needingNotification != null && needingNotification.size() > 0)
+        {
+            return notify(needingNotification);
+        }   
+        return null;                                                        
+    }
+    
+    
+    //Loop over events and find if any emails need to be sent
+    public String notifyOnEvent(List<Event> newEvents, Map<Id,Event> oldEventMap, Boolean isTest)
+    {
+        List<EmailNotificationClass> needingNotification = new List<EmailNotificationClass>();
+        
+        List<Planned_Site_Activity_Notification__c> eventNotifications = new List<Planned_Site_Activity_Notification__c>();
+        
+        for(Event e : newEvents)
+        {
+            if(e.Email_Notification_Template_Id__c != null)
+            {
+                Boolean startDateChanged = false;
+                Boolean endDateChanged = false;
+                Boolean templateChanged = false;
+                
+                if(e != null && oldEventMap != null && oldEventMap.get(e.Id) != null)
+                {
+                    startDateChanged =  e.StartDateTime != oldEventMap.get(e.Id).StartDateTime;
+                    endDateChanged = e.EndDateTime != oldEventMap.get(e.Id).EndDateTime;
+                    templateChanged = e.Email_Notification_Template_Id__c != oldEventMap.get(e.Id).Email_Notification_Template_Id__c;
+                }
+                                
+                if(isTest ||
+                   Trigger.isInsert || 
+                   templateChanged ||
+                   startDateChanged ||
+                   endDateChanged                  
+                   )
+                    system.debug('***'+e.IsAllDayEvent);
+                    if(e.IsAllDayEvent == true){
+                     
+                    //We now know we have to send an email
+                    Planned_Site_Activity_Notification__c eventCopy = new Planned_Site_Activity_Notification__c();
+                    eventCopy.Account__c = e.AccountId;
+                    eventCopy.Disable_Alarm__c = e.Disable_Alarm__c ? 'Yes' : 'No';
+                    
+                    eventCopy.On_Demand_Monitoring__c = e.On_Demand_Monitoring__c ? 'Yes' : 'No';
+                    eventCopy.Subject__c = e.Subject;
+                    eventCopy.Start__c = e.StartDateTime.adddays(1);
+                    eventCopy.End__c = e.EndDateTime.adddays(1);
+                    eventCopy.PSA_Requested_by__c = e.PSA_Requested_by__c;
+                    if(e.RecurrenceInterval != null && e.RecurrenceInterval > 0)
+                    {
+                        eventCopy.Recurrence_Interval__c = e.RecurrenceInterval + ' ';
+                        eventCopy.Recurrence_Interval__c = eventCopy.Recurrence_Interval__c.trim();
+                    } 
+                    if(e.RecurrenceType != null && e.RecurrenceType.length() > 0) eventCopy.Recurrence_Type__c = e.RecurrenceType;
+                    eventCopy.Email_Notification_Template_Id__c = e.Email_Notification_Template_Id__c;
+                    eventCopy.bcc_Email_On_Notification__c = e.bcc_Email_On_Notification__c;
+                    eventNotifications.add(eventCopy);
+               }
+                    
+                else{
+               
+                    //We now know we have to send an email
+                    Planned_Site_Activity_Notification__c eventCopy = new Planned_Site_Activity_Notification__c();
+                    eventCopy.Account__c = e.AccountId;
+                    eventCopy.Disable_Alarm__c = e.Disable_Alarm__c ? 'Yes' : 'No';
+                    
+                    eventCopy.On_Demand_Monitoring__c = e.On_Demand_Monitoring__c ? 'Yes' : 'No';
+                    eventCopy.Subject__c = e.Subject;
+                    eventCopy.Start__c = e.StartDateTime;
+                    eventCopy.End__c = e.EndDateTime;
+                    eventCopy.PSA_Requested_by__c = e.PSA_Requested_by__c;
+                    if(e.RecurrenceInterval != null && e.RecurrenceInterval > 0)
+                    {
+                        eventCopy.Recurrence_Interval__c = e.RecurrenceInterval + ' ';
+                        eventCopy.Recurrence_Interval__c = eventCopy.Recurrence_Interval__c.trim();
+                    } 
+                    if(e.RecurrenceType != null && e.RecurrenceType.length() > 0) eventCopy.Recurrence_Type__c = e.RecurrenceType;
+                    eventCopy.Email_Notification_Template_Id__c = e.Email_Notification_Template_Id__c;
+                    eventCopy.bcc_Email_On_Notification__c = e.bcc_Email_On_Notification__c;
+                    eventNotifications.add(eventCopy);
+                
+             }
+            }
+        }
+        
+        if(eventNotifications != null && eventNotifications.size() > 0)
+        {
+            insert eventNotifications;
+                
+            for(Planned_Site_Activity_Notification__c e : eventNotifications)
+            {               
+                //We now know we have to send an email                                     
+                needingNotification.add(new EmailNotificationClass('Event', e.Id,e.OwnerId,e.Email_Notification_Template_Id__c,e.Account__c,e.bcc_Email_On_Notification__c));               
+            }
+        }
+            
+        if(needingNotification != null && needingNotification.size() > 0)
+        {
+            String results =  notify(needingNotification);
+            
+            //Clean up the data we used to temporarily allow a notification to go out
+            delete eventNotifications;
+            
+            return results;
+            
+        }   
+        return null;                                                    
+    }
+    
+    
+    public Set<String> getRecipients(Id accountId)
+    {
+        System.debug('*****1*******');
+        return accountToRecipients.get(accountId);  
+    }
+     
+    public Map<Id,String> setAccountToRecipients(Set<Id> accountIds)
+    {
+        System.debug('*****1*******'+accountIds);
+        Map<Id,String> accountIdToErrorMessage = new Map<Id,String>();
+        String errorMessage = '';
+        accountToRecipients = new Map<Id,Set<String>>();
+        
+        for( Account a : [SELECT Id, Activity_Email__c FROM Account WHERE Id IN :accountIds])
+        {
+             
+            System.debug('@@@ setAccountToRecipients: a.Activity_Email__c = ' + a.Activity_Email__c);
+            
+            Set<String> emailAddresses = new Set<String>();
+            if(a.Activity_Email__c != null)
+            {
+                Set<String> validEmails = new Set<String>();                
+                if(a.Activity_Email__c.contains(','))
+                {
+                    System.debug('@@@ setAccountToRecipients COMMA');
+                    validEmails.addAll(getValidEmailAddresses(a, ',',accountIdToErrorMessage));
+                }
+                else
+                {
+                    System.debug('@@@ setAccountToRecipients SEMI-COLON');
+                    validEmails.addAll(getValidEmailAddresses(a, ';',accountIdToErrorMessage));
+                }
+                
+                System.debug('@@@ setAccountToRecipients: validEmails = ' + validEmails);
+                                                    
+                if(validEmails != null && validEmails.size() > 0)
+                {
+                    System.debug('@@@ setAccountToRecipients: accountToRecipients.put(a.Id,validEmails);');
+                    accountToRecipients.put(a.Id,validEmails);
+                }               
+            }
+        
+        }
+        System.debug('@@@ setAccountToRecipients: accountIdToErrorMessage = ' + accountIdToErrorMessage);
+        return accountIdToErrorMessage;     
+    }
+    
+    public static Set<String> getValidEmailAddressesFromString(String emailString, String splitToken)
+    {
+        System.debug('@@@ getValidEmailAddressesFromString: emailString = ' + emailString);
+        
+        Set<String> validEmailAddresses = new Set<String>();        
+        if(emailString == null)
+        {
+            System.debug('@@@ getValidEmailAddressesFromString: No email addresses');           
+            return validEmailAddresses;
+        }
+        
+        List<String> emailAddresses = emailString.split(splitToken);
+        System.debug('@@@ getValidEmailAddressesFromString: emailAddresses = ' + emailAddresses);
+        
+        if(emailAddresses != null && emailAddresses.size() > 0)
+        {
+            for(Integer i = 0; i < emailAddresses.size(); i++)
+            {   
+                String email = emailAddresses[i].trim();
+                if(isValidEmailAddress(email))
+                {
+                    validEmailAddresses.add(email);
+                }
+                else
+                {
+                    System.debug('@@@ error, non-valid email address = ' + email);                                                          
+                }
+            }
+        }
+        return validEmailAddresses;  
+    }
+    
+    private Set<String> getValidEmailAddresses(Account a, String splitToken, Map<Id,String> accountIdToErrorMessage)
+    {
+        System.debug('@@@ getValidEmailAddresses: a.Activity_Email__c = ' + a.Activity_Email__c);
+        
+        Set<String> validEmailAddresses = new Set<String>();        
+        if(a == null || a.Activity_Email__c == null)
+        {
+            System.debug('@@@ getValidEmailAddresses: No email addresses');
+            accountIdToErrorMessage.put(a.Id,'No email addresss. Actvity Email is null.');
+            return validEmailAddresses;
+        }
+        
+        List<String> emailAddresses = a.Activity_Email__c.split(splitToken);
+        
+        //Fetch Email id of Account Manager
+        
+        List<Case> cs = [select id, type from Case where accountid =:a.Id];
+        for(Case c: cs){
+            if(c.type == 'No access - entire unit/site' || c.Type == 'No access - individual components' || c.Type == 'Power Issue' && c.Type != 'Install Request' && c.type != 'Footage Review'){
+                system.debug('******'+c.Type);
+                List<AccountTeamMember> teamList = [ SELECT ID, TeamMemberRole,
+                                                    User.Email
+                                                    FROM AccountTeamMember
+                                                    WHERE AccountID = :a.Id
+                                                    AND TeamMemberRole = 'Account Manager'];
+                for(AccountTeamMember a1: teamList){
+                    emailAddresses.add(a1.User.Email);
+                }
+            }
+        }
+        System.debug('@@@ getValidEmailAddresses: emailAddresses = ' + emailAddresses);
+        if(emailAddresses != null && emailAddresses.size() > 0)
+        {
+            for(Integer i = 0; i < emailAddresses.size(); i++)
+            {   
+                String email = emailAddresses[i].trim();
+                if(isValidEmailAddress(email))
+                {
+                    validEmailAddresses.add(email);
+                }
+                else
+                {
+                    System.debug('@@@ error, non-valid email address = ' + email);
+                    String errorMessage = '';
+                    if(accountIdToErrorMessage.containsKey(a.Id))
+                    {
+                        errorMessage = accountIdToErrorMessage.get(a.Id);
+                    }                           
+                    errorMessage += 'Error with email address: ' + email + ' on Account: ' + a.Id + '. No email was sent to this email address.';                   
+                    accountIdToErrorMessage.put(a.Id,errorMessage);                                 
+                }
+            }
+        }
+        return validEmailAddresses;
+    }
+    
+    public void sendEmailTemplate(Set<String> recipients, Set<String> bccList, Id whatId, Id templateId, Id targetUserId) 
+    {
+        System.debug('*****1*******');
+        sendEmail(recipients, bccList, whatId, templateId, targetUserId, null, null); 
+    }
+    
+    public void sendEmailText(Set<String> recipients, Id targetUserId, String emailSubject, String body) 
+    {
+        System.debug('*****1*******');
+        sendEmail(recipients, null, null, null, targetUserId, emailSubject, body); 
+    }
+        
+    private void sendEmail(Set<String> recipients, Set<String> bccList, Id whatId, Id templateId, Id targetUserId, String emailSubject, String body) { 
+
+        system.debug('@@@ recipients = ' + recipients);
+        system.debug('@@@ bccList = ' + bccList);
+        system.debug('@@@ whatId = ' + whatId);
+        system.debug('@@@ templateId = ' + templateId);
+        system.debug('@@@ targetUserId = ' + targetUserId);
+        system.debug('@@@ emailSubject = ' + emailSubject);
+        system.debug('@@@ body = ' + body);                               
+        
+        if(Limits.getEmailInvocations() == Limits.getLimitEmailInvocations()) 
+        {
+            throw new EmailException('Reached Email Invocation Limit.');                 
+        }
+        
+        // Create a new single email message object
+        // that will send out a single email to the addresses in the To, CC & BCC list.
+        Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();        
+        
+        //Constant settings
+        mail.setBccSender(false);       
+        mail.setUseSignature(false);
+
+        //If we're using a templateId and a whatId then...
+        if(templateId != null && whatId != null)
+        {   
+            if(noReplyContact == null)
+            {
+                noReplyContact = getNoReplyContact();
+            }
+            targetUserId = noReplyContact.Id;
+            mail.setTargetObjectId(noReplyContact.Id);
+            
+            //the email is saved as an activity.
+            if(!((String)whatId).startsWith('00U')) //We can't save an activity for Event Notifications
+            {
+                mail.setSaveAsActivity(true);
+            }                                          
+            mail.setTemplateId(templateId);         
+            mail.setWhatId(whatId);
+            
+            List<String> toEmails = new List<String>();
+            toEmails.addAll(recipients);                    
+            if(toEmails == null || toEmails.size() == 0)
+            {
+                throw new EmailException('Null recipients not allowed when using a templateId and whatId.');
+            }
+            mail.setToAddresses(toEmails);  
+            
+            List<String> bccEmails = new List<String>();
+            bccEmails.addAll(bccList);        
+            if(bccEmails != null && bccEmails.size() > 0)
+            {
+                mail.setBccAddresses(bccEmails);                    
+            }
+
+            
+            
+        }
+        else if(emailSubject != null && body != null) //We're using a custom subject & body
+        {       
+            mail.setSaveAsActivity(false);  
+            if(targetUserId != null)
+            {
+                mail.setTargetObjectId(targetUserId);               
+            }
+            else if(recipients != null && recipients.size() > 0)
+            {
+                List<String> ccEmails = new List<String>();
+                ccEmails.addAll(recipients);         
+                mail.setToAddresses(ccEmails);          
+            }
+            else
+            {
+                //No one to send the email to!!
+                throw new EmailException('Null recipients and target User Id not allowed.');
+            }
+            
+            // Specify the subject line for your email address.
+            mail.setSubject(emailSubject);
+            mail.setPlainTextBody(body);
+        }
+        else
+        {
+            throw new EmailException('FATAL ERROR: null values: whatId = ' + whatId + ' templateId = ' + templateId + ' targetUserId = ' + targetUserId + ' subject = ' + eMailSubject + ' body = ' + body);
+        }
+          
+        // Send the email you have created.
+        try
+        {
+            List<Messaging.SendEmailResult> results = Messaging.sendEmail(new Messaging.SingleEmailMessage[] { mail }, false);
+            
+            String allErrorMessage = '';
+            for(Messaging.SendEmailResult result : results)
+            {               
+                if(!result.isSuccess())
+                {                                       
+                    List<Messaging.SendEmailError> errors = result.getErrors();
+                    for(Messaging.SendEmailError err : errors)
+                    {
+                        allErrorMessage += err.getMessage() + '\n';                                             
+                    }                   
+                }               
+            }
+            if(allErrorMessage != null && allErrorMessage.trim().length() > 2)
+            {
+                allErrorMessage = 'Error Message(s):/n' + allErrorMessage;
+                throw new EmailException('There were some errors in sending the auto-notification email.\n' + 
+                                     'The template used was: ' + templateId + ' and the object Id sent was:' + 
+                                     whatId + '/n'+ allErrorMessage);                  
+            }
+        }
+        catch (Exception exp)        
+        {
+            if(System.Test.isRunningTest())
+            {
+                //Ignore exceptions during tests
+            }
+            else
+            {
+                throw exp;
+            }        
+        }
+    }
+
+    
+    /**
+     * null     => false
+     * ''       => false
+     * ' '      => false
+     * 'x'      => false
+     * 'x@'     => false
+     * 'x@x'    => false
+     * 'x@x.x'  => true
+     */
+    public static Boolean isValidEmailAddress(String str)
+    {
+        System.debug('isValidEmailAddress: str = ' + str); 
+        if(str != null && str.trim() != null && str.trim().length() > 0)
+        {
+            String[] split = str.split('@');
+            if(split != null && split.size() == 2)
+            {
+                split = split[1].split('\\.');
+                if(split != null && split.size() >= 2)
+                {
+                    System.debug('isValidEmailAddress: true');
+                    return true;
+                }
+            }
+        }
+        System.debug('isValidEmailAddress: false');
+        return false;
+    }
+
+    public static Boolean isNotValidEmailAddress(String str)
+    {
+        System.debug('*****1*******');
+        return !isValidEmailAddress(str);
+    }
+    
+    public Contact getNoReplyContact()
+    {
+        System.debug('*****1*******');
+        Contact con = new Contact();
+        con.FirstName = 'No';
+        con.LastName = 'Reply';
+        con.Email = 'no-reply@pro-vigil.com';
+        insert con;
+        return con;     
+    }
+    
+    public class EmailException extends Exception{}    
+    
+}

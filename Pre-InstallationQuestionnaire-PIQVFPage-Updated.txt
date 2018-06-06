@@ -167,28 +167,105 @@
         </apex:selectList>
         <p />
          
-         <apex:pageBlock id ="pb1" >
-             <apex:actionFunction name="RenderSection" action="{!RenderSec}"/>
-             
-             <apex:outputLabel for="IndustryType" value="Industry Type" styleClass="fieldLabel required" />
-             <p class="grayDescription">Knowing what Industry type of site you have will help us monitor more effectively.</p>
-             <apex:selectList id="IndustryType" value="{!SelectedVal}" size="1" onChange="RenderSection();">
-                 <apex:selectOptions value="{!IndustryTypeList}" />
-             </apex:selectList>
-             <p />
-             
-             <apex:pageBlockSection id="section1" rendered="{!showFields}">
-             <apex:outputLabel for="PropertyOwnerName" value="Property Owner Name" styleClass="fieldLabel required" />
-             <p class="grayDescription">Knowing Property Owner Name will help us monitor more effectively.</p>
-              <apex:inputText id="PropertyOwnerName" value="{!p.Property_Owner_Name__c}" />
-             <p />
-             
-             <apex:outputLabel for="PropertyOwnerCompanyName" value="Property Owner Company Name" styleClass="fieldLabel required" />
-             <p class="grayDescription">Knowing Property Owner Name will help us monitor more effectively.</p>
-              <apex:inputText id="PropertyOwnerCompanyName" value="{!p.Property_Owner_Company_Name__c}" />
-             <p />
-             
-         </apex:pageBlockSection>
+        <apex:pageBlock id ="pb1">
+            
+            <apex:actionFunction name="RenderSection" action="{!RenderSec}"/>
+            
+            <apex:outputLabel for="IndustryType" value="Industry Type" styleClass="fieldLabel required" />
+            <p class="grayDescription">Knowing what Industry type of site you have will help us monitor more effectively.</p>
+            <apex:selectList id="IndustryType" value="{!SelectedVal}" size="1" onChange="RenderSection();">
+                <apex:selectOptions value="{!IndustryTypeList}" />
+            </apex:selectList>
+            <p/>
+            
+            <apex:pageBlockSection id="section1" rendered="{!showFields}"  title="For construction indutries these fields are mandatory">
+                
+                <apex:pageBlockSectionItem>
+                    
+                    <apex:outputLabel for="JobName" value="Job Name" styleClass="fieldLabel required" />
+                    <apex:inputText id="JobName" value="{!p.Job_Name__c}" />
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem>
+                    <apex:outputLabel for="PropertyOwnerName" value="Property Owner Name" styleClass="fieldLabel required" />
+                    <apex:inputText id="PropertyOwnerName" value="{!p.Property_Owner_Name__c}" />
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem>
+                    <apex:outputLabel for="PropertyOwnerCompanyName" value="Property Owner Company Name" styleClass="fieldLabel required" />
+                    <apex:inputText id="PropertyOwnerCompanyName" value="{!p.Property_Owner_Company_Name__c}" />
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem>
+                    <apex:outputLabel for="PropertyOwnerAddress" value="Property Owner Address" styleClass="fieldLabel required" />
+                    <apex:inputText id="PropertyOwnerAddress" value="{!p.Property_Owner_Address__c}" />
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem>
+                    <apex:outputLabel for="PropertyOwnerCity" value="Property Owner City" styleClass="fieldLabel required" />
+                    <apex:inputText id="PropertyOwnerCity" value="{!p.Property_Owner_City__c}" />
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem>
+                    <apex:outputLabel for="PropertyOwnerState" value="Property Owner State" styleClass="fieldLabel required" />
+                    <apex:inputText id="PropertyOwnerState" value="{!p.Property_Owner_State__c}" />
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem>
+                    
+                    <apex:outputLabel for="PropertyOwnerPostalCode" value="Property Owner Postal Code" styleClass="fieldLabel required" />
+                    <apex:inputText id="PropertyOwnerPostalCode" value="{!p.Property_Owner_Postal_Code__c}" />
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem>
+                    
+                    <apex:outputLabel for="GeneralContractorName" value="General Contractor Name" styleClass="fieldLabel required" />
+                    <apex:inputText id="GeneralContractorName" value="{!p.General_Contractor_Name__c}" />
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem>
+                    
+                    <apex:outputLabel for="GeneralContractorCompanyName" value="General Contractor Company Name" styleClass="fieldLabel required" />
+                    <apex:inputText id="GeneralContractorCompanyName" value="{!p.General_Contractor_Company_Name__c}" />
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem>
+                    
+                    <apex:outputLabel for="GeneralContractorAddress" value="General Contractor Address" styleClass="fieldLabel required" />
+                    <apex:inputText id="GeneralContractorAddress" value="{!p.General_Contractor_Address__c}" />
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem>
+                    
+                    <apex:outputLabel for="GeneralContractorCity" value="General Contractor City" styleClass="fieldLabel required" />
+                    <apex:inputText id="GeneralContractorCity" value="{!p.General_Contractor_City__c}" />
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem>
+                    
+                    <apex:outputLabel for="GeneralContractorState" value="General Contractor State" styleClass="fieldLabel required" />
+                    <apex:inputText id="GeneralContractorState" value="{!p.General_Contractor_State__c}" />
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem>
+                    
+                    <apex:outputLabel for="GeneralContractorPostalCode" value="General Contractor Postal Code" styleClass="fieldLabel required" />
+                    <apex:inputText id="GeneralContractorPostalCode" value="{!p.General_Contractor_Postal_Code__c}" />
+                    
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
         </apex:pageBlock>
 
         <apex:outputLabel for="siteOccupied" value="Is this site an occupied/residential site?" styleClass="fieldLabel required" />

@@ -1,0 +1,62 @@
+global class UpdateRMRValueOnAccount implements Database.Batchable<SObject> {
+    
+    global Database.QueryLocator start(Database.BatchableContext BC)
+    { 
+        return Database.getQueryLocator('SELECT ID, Name, Total_4_week_revenue__c, ParentId,Total_4_Week_RMR__c FROM Account');
+    }  
+    
+    global void execute(Database.BatchableContext BC, List<Account> scope){
+        
+        List<Account> AccList = new List<Account>();
+        List<Account> AccListToUpdate = new List<Account>();
+        Set<ID> idAcc = new Set<ID>();
+        Set<ID> idAcc2 = new Set<ID>();
+        
+        Decimal Total = 0.0;
+        
+        for(Account acc :  scope){
+            
+            if(acc.ParentId != null)
+            {
+                idAcc.add(acc.id);
+                idAcc2.add(acc.ParentId);
+            } 
+        }            
+        
+        List<Account> childAccounts = [Select id, Name, Total_4_week_revenue__c, Total_4_Week_RMR__c, ParentId from Account where ParentId != null and id IN: idAcc];
+        
+        List<Account> parentAccounts = [Select id, Name, Total_4_Week_RMR__c from Account where id In : idAcc2]; 
+        
+        system.debug('Child Accounts:'+childAccounts);
+        system.debug('Parent Accounts:'+parentAccounts);
+        
+        for(Account a: parentAccounts){
+            for(Account b: childAccounts){ 
+                system.debug('****'+b);
+                system.debug('**'+a.id+'***'+b.ParentId);
+                if(a.id == b.ParentId && b.Total_4_week_revenue__c != 0.00){
+                    Total +=b.Total_4_week_revenue__c;
+                }
+            }
+            if(a.Total_4_Week_RMR__c == Null || a.Total_4_Week_RMR__c != Null){
+                a.Total_4_Week_RMR__c = Total;
+                AccListToUpdate.add(a);
+                system.debug('Total_4_Week_RMR__c Value on Parent Account:'+a.Total_4_Week_RMR__c);
+                Total = 0.0;
+            }
+        }
+        
+        Map<id,account> accmap = new Map<id,account>();
+        accmap.putall(AccListToUpdate);
+        
+        if(accmap.size() > 0){
+            update accmap.values();
+            system.debug(accmap.size()+'Accounts Updated sucessfully:'+accmap.values());
+        } 
+    }
+    
+    global void finish(Database.BatchableContext BC)
+    {
+    }
+    
+}

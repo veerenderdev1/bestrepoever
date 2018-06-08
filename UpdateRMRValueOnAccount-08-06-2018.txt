@@ -32,7 +32,7 @@ global class UpdateRMRValueOnAccount implements Database.Batchable<SObject> {
         
         for(Account a: parentAccounts){
             for(Account b: childAccounts){ 
-                system.debug('****'+b);
+                system.debug('Child customers****'+b);
                 system.debug('**'+a.id+'***'+b.ParentId);
                 if(a.id == b.ParentId && b.Total_4_week_revenue__c != 0.00){
                     Total +=b.Total_4_week_revenue__c;
@@ -41,7 +41,7 @@ global class UpdateRMRValueOnAccount implements Database.Batchable<SObject> {
             if(a.Total_4_Week_RMR__c == Null || a.Total_4_Week_RMR__c != Null){
                 a.Total_4_Week_RMR__c = Total;
                 AccListToUpdate.add(a);
-                system.debug('Total_4_Week_RMR__c Value on Parent Account:'+a.Total_4_Week_RMR__c);
+                system.debug('Total_4_Week_RMR__c Value on Parent Customer:'+a.Total_4_Week_RMR__c);
                 Total = 0.0;
             }
         }

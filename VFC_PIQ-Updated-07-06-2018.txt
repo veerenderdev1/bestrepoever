@@ -190,7 +190,7 @@ public without sharing class VFC_PIQ {
         }
         
         String SOQLquery = 'SELECT ID, Name, OwnerID, Owner.Name, LeadSource, RecordTypeID'
-            + ', PiQ_Contact__c, PiQ_Contact__r.Name'
+            + ', PiQ_Contact__c, PiQ_Contact__r.Name, What_is_being_built__c'
             + ', Contract_Expiration_Date__c'
             + ', AccountID, Property_Owner_Name__c, Property_Owner_Company_Name__c,Account.Name, Account.Site_Type__c'
             + ', Account.Occupied__c, Account.Project_Completion_Date__c'
@@ -218,7 +218,7 @@ public without sharing class VFC_PIQ {
             + ', Account.Customer_Office_Hours__c'
             + ', Account.Who_is_the_Developer_or_Property_Owner__c'
             + ', Account.State_of_Incorporation__c'
-            + ', Job_Name__c, Property_Owner_Address__c, Property_Owner_City__c, Property_Owner_State__c'
+            + ', Project_Name__c, Property_Owner_Address__c, Property_Owner_City__c, Property_Owner_State__c'
             + ', Property_Owner_Postal_Code__c, General_Contractor_Name__c, General_Contractor_Company_Name__c'
             + ', General_Contractor_Address__c, General_Contractor_City__c, General_Contractor_State__c'
             + ', Federal_ID_No__c, General_Contractor_Postal_Code__c'
@@ -292,7 +292,8 @@ public without sharing class VFC_PIQ {
         p.Federal_ID_No__c = o.Federal_ID_No__c;
         
         //Additional PIQ Fields Requirements CHAN-622
-        p.Job_Name__c = o.Job_Name__c;
+        p.Project_Name__c = o.Project_Name__c;
+        p.What_is_being_built__c = o.What_is_being_built__c;
         p.Property_Owner_Name__c = o.Property_Owner_Name__c;
         p.Property_Owner_Company_Name__c = o.Property_Owner_Company_Name__c;
         p.Property_Owner_Address__c = o.Property_Owner_Address__c;
@@ -376,8 +377,10 @@ public without sharing class VFC_PIQ {
         }
         else {
             showFields = false;
+            
         }
-        return null ;
+         
+        return Null;
     }
     
     public PageReference submit() {
@@ -588,8 +591,9 @@ public without sharing class VFC_PIQ {
         o.Federal_ID_No__c = p.Federal_ID_No__c;
         
         //CHAN-622, Additional fields for construction indstries. these fields will updates on Opportunity.
-        o.Job_Name__c = p.Job_Name__c;
+        o.Project_Name__c = p.Project_Name__c;
         o.Property_Owner_Name__c = p.Property_Owner_Name__c;
+        o.What_is_being_built__c = p.What_is_being_built__c;
         o.Property_Owner_Company_Name__c = p.Property_Owner_Company_Name__c;
         o.Property_Owner_Address__c = p.Property_Owner_Address__c;
         o.Property_Owner_City__c = p.Property_Owner_City__c;
@@ -660,6 +664,7 @@ public without sharing class VFC_PIQ {
                 'What are your business hours for service related visits?' => p.Customer_Office_Hours__c
                     , 'Who is the Developer or Property Owner?' => p.Who_is_the_Developer_or_Property_Owner__c  
                     ,'E-Mail Address' => p.Activity_Email__c
+                    , 'What is being built?' => p.What_is_being_built__c
                     , 'Notify me via email' => String.valueOf( p.Notifiy_via_email_on_arm_or_disarm__c )
                     , 'Outage Notification Method' => p.Outage_Notification_Method__c
                     , 'Username' => p.Username__c }

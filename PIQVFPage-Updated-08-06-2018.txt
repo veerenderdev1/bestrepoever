@@ -173,16 +173,17 @@
         <p />
         
         <!--CHAN-622, Additional Fields for construction indstries -->
-            
+       <apex:actionRegion >
             <apex:actionFunction name="RenderSection" action="{!RenderSec}"/>
             
             <apex:outputLabel for="IndustryType" value="Industry Type"/>
             <p class="grayDescription">Knowing what Industry type of site you have will help us monitor more effectively.</p>
             <apex:selectList id="IndustryType" value="{!SelectedVal}" size="1" multiselect="false" onChange="RenderSection();">
                 <apex:selectOptions value="{!IndustryTypeList}" />
-             </apex:selectList>
+              </apex:selectList>
             <p/>
             
+        
             <apex:pageBlockSection id="section1" rendered="{!showFields}">
                 
                 <apex:pageBlockSectionItem >
@@ -271,6 +272,7 @@
                     
                 </apex:pageBlockSectionItem>
             </apex:pageBlockSection>
+        </apex:actionRegion>
          
 
         <apex:outputLabel for="siteOccupied" value="Is this site an occupied/residential site?" styleClass="fieldLabel required" />
@@ -353,9 +355,14 @@
         <apex:inputText id="officehours" value="{!p.Customer_Office_Hours__c}" />
         <p/>
         
-        <apex:outputLabel for="PropertyOwner" value="Who is the Developer or Property Owner?" styleClass="fieldLabel required" />
+        <apex:outputLabel for="PropertyOwner" value="Property Owner?" styleClass="fieldLabel required" />
         <p class="grayDescription">You will enter Property Owner details here</p>
         <apex:inputText id="PropertyOwner" value="{!p.Who_is_the_Developer_or_Property_Owner__c}" />
+        <p/>
+        
+        <apex:outputLabel for="Whatisbeingbuilt" value="What is being built?" styleClass="fieldLabel required" />
+        <p class="grayDescription">You will enter Property Owner details here</p>
+        <apex:inputText id="Whatisbeingbuilt" value="{!p.What_is_being_built__c}" />
         <p/>
                      
         <apex:outputLabel for="emailForReporting" value="E-Mail Address for Reporting Activity / Outages (multiple is ok)" styleClass="fieldLabel required" />

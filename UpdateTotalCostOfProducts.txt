@@ -1,0 +1,71 @@
+public class UpdateTotalCostOfProducts {
+    public static void updateTotalCostOfInventoryProducts(List<Opportunity> newList){
+        
+        Set<Id> allOppIds = new Set<Id>();
+        for(Opportunity opp : newList) {
+            allOppIds.add(opp.ID);
+        }
+        
+        List<Opportunity> oppList = [SELECT Id, Name, Total_Cost_Of_Products__c, (SELECT Id, Product2.name, UnitPrice, Quantity, Discount__c, NetSuite_Item_Number__c
+                                                                                            FROM OpportunityLineItems) 
+                                     FROM Opportunity WHERE Id=:allOppIds];
+        
+        system.debug('Opportunity List:'+oppList);
+        List<Product_Cost__c> ipList = [SELECT Purchase_Price__c, Total__c, Netsuite_Item_Number__c, Name from Product_Cost__c limit 500];
+        
+        system.debug('Inventory List:'+ipList);
+        
+        List<opportunity> updateOpp = new List<Opportunity>();
+        Decimal sum = 0.0;
+        Decimal Temp = 0.0;
+        
+        for(Opportunity oppty: newList){
+            for(Opportunity o: oppList){
+                system.debug('Opportunity :'+o);
+                for(OpportunityLineItem ol: o.OpportunityLineItems){
+                    system.debug('Opportunity Line Items:'+ol);
+                    if(ol.UnitPrice > 0 ){
+                        system.debug('Product Name::'+ol.Product2.name);
+                       
+                        for(Product_Cost__c ip: ipList){
+                            if(ol.NetSuite_Item_Number__c == ip.Netsuite_Item_Number__c){
+                                system.debug('******'+ip.Total__c);
+                                Temp = ip.Total__c * ol.Quantity;
+                                system.debug('******'+Temp);
+                                sum += Temp;
+                                system.debug('******'+sum);
+                                oppty.Total_Cost_Of_Products__c = sum;
+                                system.debug('******'+oppty.Total_Cost_Of_Products__c);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    public static void updateWirelessAllowances(List<Opportunity> newList){
+        
+        Set<Id> allOppIds = new Set<Id>();
+        for(Opportunity opp : newList) {
+            allOppIds.add(opp.ID);
+        }
+        
+        List<Opportunity> oppList = [SELECT Id, Name, Wireless_Allowances__c, (SELECT Id, Product2.name, UnitPrice, Quantity
+                                                                               FROM OpportunityLineItems) 
+                                     FROM Opportunity WHERE Id=:allOppIds];
+        Decimal total = 0.0;
+        for(Opportunity op: newList){
+            for(Opportunity o: oppList){
+                for(OpportunityLineItem li: o.OpportunityLineItems){
+                    if(li.Product2.Name.Contains('Cat5e') && li.UnitPrice > 0){
+                        system.debug('******'+li.product2.Name);
+                        total = li.UnitPrice * li.Quantity; 
+                        system.debug('******'+total);
+                        op.Wireless_Allowances__c = total;
+                        system.debug('******'+op.Wireless_Allowances__c);
+                    }
+                }
+            }
+        }
+    }
+}

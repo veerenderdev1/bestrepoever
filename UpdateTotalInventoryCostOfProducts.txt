@@ -1,0 +1,11 @@
+trigger UpdateTotalInventoryCostOfProducts on Opportunity (before update) {
+    
+    if(Trigger.isUpdate && Trigger.isBefore){
+        for(Opportunity op: trigger.new){
+            if(op.StageName == '15-Quote'){
+                UpdateTotalCostOfProducts.updateTotalCostOfInventoryProducts(Trigger.new);
+            }
+        }
+        UpdateTotalCostOfProducts.updateWirelessAllowances(Trigger.new);
+    }
+}

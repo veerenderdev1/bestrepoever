@@ -1,47 +1,33 @@
 <apex:page standardController="Case" extensions="caseController" showHeader="true">
     <apex:sectionHeader subtitle="New Case" title="Case Edit"/>
-    
-    <apex:stylesheet value="{!URLFOR( $Resource.proximaNovaCss, '' )}" />
-    
-    <style type="text/css">
-        .fieldLabel {
-        font-weight: bold;
-        font-family: Helvetica;
-        font-size: 9pt;
-        padding-right: 15px;
-        padding-left: 65px;
-        color: rgb(75, 75, 75);
-    }
-    </style>
-    
+            
     <script>
     function doChange(this1)
     {
         if(this1.value == 'Holiday Monitoring'){
-            document.getElementById('{!$Component.theForm.pb.pbs1.myid}').style.visibility="visible";
+            document.getElementById('{!$Component.theForm.pb.pbs1.TotalHolidayBilled}').style.visibility="visible";
             }
         else{
-            document.getElementById('{!$Component.theForm.pb.pbs1.myid}').style.visibility="hidden";
+            document.getElementById('{!$Component.theForm.pb.pbs1.TotalCreditDue}').style.visibility="hidden";
+            document.getElementById('{!$Component.theForm.pb.pbs1.TotalHolidayBilled}').style.visibility="hidden";
          }
- 
     }
     function doChange2(this2)
     {
          var myPicklistElement = document.getElementById('{!$Component.theForm.pb.pbs1.rid}');
          var myPicklistValue = myPicklistElement.options[myPicklistElement.selectedIndex].value;
-        //alert(myPicklistValue);
+
         if(this2.value == 'Credit Issued' && myPicklistValue == 'Credit Request'){
-            document.getElementById('{!$Component.theForm.pb.pbs1.myid2}').style.visibility="visible";
+            document.getElementById('{!$Component.theForm.pb.pbs1.TotalCreditDue}').style.visibility="visible";
             }
         else{
-            document.getElementById('{!$Component.theForm.pb.pbs1.myid2}').style.visibility="hidden";
+            document.getElementById('{!$Component.theForm.pb.pbs1.TotalCreditDue}').style.visibility="hidden";
          }
     }
     </script>
     
     <apex:form id="theForm">
         <apex:pageBlock mode="edit" id="pb" title="Case Edit">
-            
                                
             <apex:pageBlockSection id="pbs1" columns="2">
                     
@@ -54,20 +40,13 @@
                     <apex:inputField value="{!cs.ParentId}" />
                     <apex:inputField value="{!cs.Status}" required="true" />
                     <apex:inputField value="{!cs.Type}"  required="true"/>
+                  
+                  <!--CHAN-714 New Fields for Accounting Request -->
                     <apex:inputField id="rid" value="{!cs.Reason}"  onchange="doChange(this);"/>  
-               
-                <apex:outputPanel id="myid" dir="LTR">
-                    <apex:outputLabel for="TotalHolidayBilled" value="Total Holiday Billed" styleClass="fieldLabel" />
                     <apex:inputText id="TotalHolidayBilled" value="{!cs.Total_Holiday_Billed__c}" />
-                </apex:outputPanel>
-                
                     <apex:inputField value="{!cs.Resolution_Code__c}"  onchange="doChange2(this);"/>
-               
-                <apex:outputPanel id="myid2" dir="LTR">
-                    <apex:outputLabel for="TotalCreditDue" value="Total Credit Due" styleClass="fieldLabel" />
                     <apex:inputText id="TotalCreditDue" value="{!cs.Total_Credit_Due__c}" />
-                </apex:outputPanel>
-                
+              
                     <apex:inputField value="{!cs.Reason_for_credit__c}" />
                     <apex:inputField value="{!cs.Credit_memo_details__c}" />
                     <apex:inputField value="{!cs.Additional_Information__c}" />

@@ -494,7 +494,7 @@ public without sharing class VFC_PIQ {
         p2.Billing_Contact_Name__c = p.Billing_Contact_Name__c;
         p2.Billing_Phone__c = p.Billing_Phone__c;
         p2.Billing_Contact_Email__c = p.Billing_Contact_Email__c;
-        p.Purchase_Order_Number__c = p.Purchase_Order_Number__c; 
+        p2.Purchase_Order_Number__c = p.Purchase_Order_Number__c; 
         p2.Tax_Exempt__c = p.Tax_Exempt__c;
         p2.Billing_Street__c = p.Billing_Street__c;
         p2.Billing_City__c = p.Billing_City__c;

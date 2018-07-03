@@ -1,0 +1,110 @@
+<apex:page standardController="Case" extensions="caseController" showHeader="true">
+    <apex:sectionHeader subtitle="New Case" title="Case Edit"/>
+    
+    <apex:stylesheet value="{!URLFOR( $Resource.proximaNovaCss, '' )}" />
+    
+    <style type="text/css">
+        .fieldLabel {
+        font-weight: bold;
+        font-family: Helvetica;
+        font-size: 9pt;
+        padding-right: 15px;
+        padding-left: 65px;
+        color: rgb(75, 75, 75);
+    }
+    </style>
+    
+    <script>
+    function doChange(this1)
+    {
+        if(this1.value == 'Holiday Monitoring'){
+            document.getElementById('{!$Component.theForm.pb.pbs1.myid}').style.visibility="visible";
+            }
+        else{
+            document.getElementById('{!$Component.theForm.pb.pbs1.myid}').style.visibility="hidden";
+         }
+ 
+    }
+    function doChange2(this2)
+    {
+         var myPicklistElement = document.getElementById('{!$Component.theForm.pb.pbs1.rid}');
+         var myPicklistValue = myPicklistElement.options[myPicklistElement.selectedIndex].value;
+        //alert(myPicklistValue);
+        if(this2.value == 'Credit Issued' && myPicklistValue == 'Credit Request'){
+            document.getElementById('{!$Component.theForm.pb.pbs1.myid2}').style.visibility="visible";
+            }
+        else{
+            document.getElementById('{!$Component.theForm.pb.pbs1.myid2}').style.visibility="hidden";
+         }
+    }
+    </script>
+    
+    <apex:form id="theForm">
+        <apex:pageBlock mode="edit" id="pb" title="Case Edit">
+            
+                               
+            <apex:pageBlockSection id="pbs1" columns="2">
+                    
+                    <apex:inputField value="{! cs.ContactId }" required="true"/>
+                    <apex:inputField value="{! cs.vTiger_Ticket_ID__c }"/> 
+                    <apex:inputField value="{! cs.AccountId }" required="true"/>
+                    <apex:outputField value="{!cs.OwnerId}" />
+                    <apex:inputField value="{!cs.Activity_Email__c}" />
+                    <apex:outputField value="{!cs.RecordTypeId}" />
+                    <apex:inputField value="{!cs.ParentId}" />
+                    <apex:inputField value="{!cs.Status}" required="true" />
+                    <apex:inputField value="{!cs.Type}"  required="true"/>
+                    <apex:inputField id="rid" value="{!cs.Reason}"  onchange="doChange(this);"/>  
+               
+                <apex:outputPanel id="myid" dir="LTR">
+                    <apex:outputLabel for="TotalHolidayBilled" value="Total Holiday Billed" styleClass="fieldLabel" />
+                    <apex:inputText id="TotalHolidayBilled" value="{!cs.Total_Holiday_Billed__c}" />
+                </apex:outputPanel>
+                
+                    <apex:inputField value="{!cs.Resolution_Code__c}"  onchange="doChange2(this);"/>
+               
+                <apex:outputPanel id="myid2" dir="LTR">
+                    <apex:outputLabel for="TotalCreditDue" value="Total Credit Due" styleClass="fieldLabel" />
+                    <apex:inputText id="TotalCreditDue" value="{!cs.Total_Credit_Due__c}" />
+                </apex:outputPanel>
+                
+                    <apex:inputField value="{!cs.Reason_for_credit__c}" />
+                    <apex:inputField value="{!cs.Credit_memo_details__c}" />
+                    <apex:inputField value="{!cs.Additional_Information__c}" />
+                     
+                    <apex:inputField value="{!cs.Priority}" />
+                    <apex:inputField value="{!cs.Safe_Word_Verified__c}"/>
+                    <apex:inputField value="{!cs.IsEscalated}"/>
+                    <apex:inputField value="{!cs.Install_Type__c}" required="true"/>
+                    <apex:inputField value="{!cs.Units__c}" required="true"/>           
+                    <apex:inputField value="{!cs.Invoiced__c}"/>
+                    
+                </apex:pageBlockSection>
+               
+            
+            <apex:pageBlockSection id="pbs2" columns="2" title="Footage Retrieval">
+                <apex:inputField value="{!cs.Type_of_Footage_Required__c}" required="true"/>
+                <apex:inputField value="{!cs.Begin_date_time__c}" required="true"/>
+                <apex:inputField value="{!cs.Identify_Camera_Numbers__c}" required="true"/>
+                <apex:inputField value="{!cs.End_Date_Time__c}" required="true" />
+                <apex:inputField value="{!cs.Time_Zone__c}"  required="true" />
+            </apex:pageBlockSection>
+            
+            <apex:pageBlockSection id="pbs3" columns="1" title="Description Information">
+                <apex:inputField value="{!cs.Subject}" required="true"/>
+                <apex:inputField value="{!cs.Description}" required="true"/>
+                <apex:inputField value="{!cs.Comments__c}"/>
+            </apex:pageBlockSection>
+            
+            <apex:pageBlockSection id="pbs4" columns="1" title="System Information" >
+                <apex:inputField value="{!cs.Origin}" />
+            </apex:pageBlockSection>
+            
+              <apex:pageBlockButtons >
+                <apex:commandButton value="Save" action="{!Save }" />
+                <apex:commandButton value="Cancel" action="{!Cancel }"/>
+            </apex:pageBlockButtons>
+            
+        </apex:pageBlock>
+    </apex:form>
+</apex:page>

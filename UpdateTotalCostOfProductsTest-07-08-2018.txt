@@ -1,0 +1,250 @@
+@isTest
+private class UpdateTotalCostOfProductsTest {
+    
+    @isTest
+    private static void updateTotalCostOfProductsTestMethod(){
+        
+        String orgId = Userinfo.getOrganizationID();        
+        String uniqueEmail = 'test@' + orgId + '.net.test';
+        
+        UserRole r = new UserRole(DeveloperName = 'MyCustomRole', Name = 'Test Role1');
+        insert r;
+        
+        User u1 = new User( Alias = 'TST'
+                           , CommunityNickname = 'TST'
+                           , Email = uniqueEmail
+                           , EmailEncodingKey = 'UTF-8'
+                           , LastName = 'Testing'
+                           , LanguageLocaleKey = 'en_US'
+                           , LocaleSidKey = 'en_US'
+                           , Profile = new Profile( Name = '#Custom: Sales Management' )
+                           , TimezoneSidKey = 'America/Los_Angeles'
+                           , UserName = uniqueEmail, Commission_Code__c = '', UserRoleId = r.Id );
+        insert u1;
+        
+        UserRole r1 = new UserRole(DeveloperName = 'MyCustomRole2', Name = 'Test Role2');
+        insert r1;
+        
+        String uniqueEmail2 = 'test2@' + orgId + '.net.test';
+        User u2 = new User( Alias = 'TST2'
+                           , CommunityNickname = 'TST2'
+                           , Email = uniqueEmail2
+                           , EmailEncodingKey = 'UTF-8'
+                           , LastName = 'Testing2'
+                           , LanguageLocaleKey = 'en_US'
+                           , LocaleSidKey = 'en_US'
+                           , Profile = new Profile( Name = '#Custom: Sales Management' )
+                           , TimezoneSidKey = 'America/Los_Angeles'
+                           , UserName = uniqueEmail2, Commission_Code__c = '', UserRoleId = r1.Id );
+        insert u2;
+        
+        User thisUser = [SELECT Id FROM User WHERE Id = :u2.Id];
+        
+        System.runAs (thisUser) {
+            Account a = new Account();
+            a.Name = 'SGI Test One Account';
+            insert a;
+            
+            AccountTeamMember m1 = new AccountTeamMember();
+            m1.AccountId = a.ID;
+            m1.TeamMemberRole = 'Field Services';
+            m1.UserId = u1.ID;
+            insert m1;
+            
+            AccountTeamMember m2 = new AccountTeamMember();
+            m2.AccountId = a.ID;
+            m2.TeamMemberRole = 'Account Manager';
+            m2.UserId = u2.ID;
+            insert m2;
+            
+            Contact cnt = new Contact();
+            cnt.FirstName = 'Test';
+            cnt.LastName = 'Contact';
+            cnt.AccountID = a.ID;
+            insert cnt;
+            
+            Product2 newProd = new Product2(Name = 'Fixed - First Month Free', Netsuite_Item_Number__c = '111', family = 'test family');
+            insert newProd;
+            
+            Product2 newProd1 = new Product2(Name = 'Test2', Netsuite_Item_Number__c = '222', family = 'test family');
+            insert newProd1;
+            
+            Product2 newProd2 = new Product2(Name = 'Cat5e Per Foot', Netsuite_Item_Number__c = '333', family = 'test family');
+            insert newProd2;
+            
+            Id priceBook2Id = Test.getStandardPricebookId();
+            
+            PriceBookEntry pbEntry = new PriceBookEntry(
+                UnitPrice = 100,
+                PriceBook2Id = priceBook2Id,
+                Product2Id = newProd.Id,
+                IsActive = true);
+            insert pbEntry ;
+            
+            PriceBookEntry pbEntry2 = new PriceBookEntry(
+                UnitPrice = 200,
+                PriceBook2Id = priceBook2Id,
+                Product2Id = newProd1.Id,
+                IsActive = true);
+            insert pbEntry2;
+            
+            PriceBookEntry pbEntry3 = new PriceBookEntry(
+                UnitPrice = 300,
+                PriceBook2Id = priceBook2Id,
+                Product2Id = newProd2.Id,
+                IsActive = true);
+            insert pbEntry3;
+            
+            Pricebook2 customPB = new Pricebook2(Name='Custom Pricebook', isActive=true);
+            insert customPB;
+            
+            
+            Opportunity o = new Opportunity();
+            o.AccountID = a.ID;
+            o.Name = 'SGI Test Oppty';
+            o.StageName = '01-Discovery';  
+            o.CloseDate = Date.today();
+            o.PriceBook2 = customPB;
+            o.Contract_Expiration_Date__c = Date.today();
+            o.Billing_Schedule__c = 'Monthly';
+            o.Payment_Terms__c = 'NET 15';
+            o.Total_Cost_Of_Products__c = null;
+            o.PiQ_Contact__c = cnt.ID;
+            o.Wireless_Allowances__c = null;
+            o.Finance_Type__c = 'Purchased';
+            o.First_Month_Free__c = False;
+            insert o; 
+            
+            Product_Cost__c p1 = new Product_Cost__c();
+            p1.Purchase_Price__c = 20;
+            p1.Netsuite_Item_Number__c = '111';
+            p1.Total__c = 100.00;
+            p1.Name = 'Test1';
+            insert p1;
+            
+            Product_Cost__c p2 = new Product_Cost__c();
+            p2.Purchase_Price__c = 30;
+            p2.Netsuite_Item_Number__c = '222';
+            p2.Total__c = 200.00;
+            p2.Name = 'Test2';
+            insert p2;
+            
+            Product_Cost__c p3 = new Product_Cost__c();
+            p3.Purchase_Price__c = 40;
+            p3.Netsuite_Item_Number__c = '333';
+            p3.Total__c = 50.00;
+            p3.Name = 'Cat5e Per Foot';
+            insert p3;
+            
+            
+            OpportunityLineItem oppLine1 = new OpportunityLineItem(pricebookentryid = pbEntry.Id, 
+                                                                   UnitPrice = 2000, Quantity = 2, Discount__c = 0.0, OpportunityID = o.Id);
+            insert oppLine1;
+            
+            OpportunityLineItem oppLine2 = new OpportunityLineItem(pricebookentryid = pbEntry2.Id, 
+                                                                   UnitPrice = 3000, Quantity = 3, Discount__c = 0.0, OpportunityID = o.Id);
+            insert oppLine2; 
+            
+            OpportunityLineItem oppLine3 = new OpportunityLineItem(pricebookentryid = pbEntry3.Id, 
+                                                                   UnitPrice = 10, Quantity = 3, Discount__c = 0.0, OpportunityID = o.Id);
+            insert oppLine3; 
+            
+            Test.startTest(); 
+            
+            o.StageName = '15-Quote';
+            o.First_Month_Free__c = true;
+            update o;
+            
+            Opportunity op=[select id, Total_Cost_Of_Products__c, Wireless_Allowances__c from Opportunity where id=:o.id];
+            
+            System.assertEquals(op.Total_Cost_Of_Products__c, 950.00);
+            System.assertEquals(op.Wireless_Allowances__c, 30.00);
+            
+            Test.stopTest();
+        }
+    }
+    
+    @isTest
+    public static void removeFirstMonthFreeTestMethod(){
+        
+        List<OpportunityLineItem> newList = new List<OpportunityLineItem>();
+        
+        //Create Test Account
+        Account a = new Account();
+        a.Name = 'Test';
+        insert a;
+        
+        Date closeDt = Date.Today();
+        
+        //Create Test Case
+        Case cas = new Case(Status ='New', Priority = 'Medium', Origin = 'Email'); 
+        insert cas;
+        
+        //Fetch Standard Price Book ID
+        Id pricebookId = Test.getStandardPricebookId();
+        
+        //Create Test Products
+        Product2 prd1 = new Product2 (Name='Fixed - First Month Free', Description='Test Product Entry 1', Storage_Days__c = 45, productCode = 'ABC', isActive = true);
+        insert prd1;
+        
+        Product2 prd2 = new Product2 (Name='Test Product Entry 2', Description='Test Product Entry 2', productCode = 'ABD', isActive = true);
+        insert prd2;
+        
+        //Create Test PricebookEntrys
+        PricebookEntry pbe1 = new PricebookEntry (Product2ID=prd1.id, Pricebook2ID=pricebookId,UnitPrice=50, isActive=true);
+        insert pbe1;
+        
+        PricebookEntry pbe2 = new PricebookEntry (Product2ID=prd2.id, Pricebook2ID=pricebookId,UnitPrice=60, isActive=true);
+        insert pbe2;
+        
+        //Create Test opportunity
+        opportunity oppr = new opportunity(Name='Test Opportunity' , Pricebook2Id = pbe1.Pricebook2Id, AccountId=a.Id, StageName = 'Prospecting', CloseDate = closeDt);
+        insert oppr;
+        
+        
+        //Create Test OpportunityLineItems
+        OpportunityLineItem oppLine1 = new OpportunityLineItem(pricebookentryid = pbe1.Id, 
+                                                               TotalPrice = 2000, Quantity = 2, OpportunityID = oppr.Id);
+        insert oppLine1;
+        
+        OpportunityLineItem oppLine2 = new OpportunityLineItem(pricebookentryid = pbe2.Id, 
+                                                               TotalPrice = 3000, Quantity = 3, OpportunityID = oppr.Id);
+        insert oppLine2;
+        
+        //Delete OpportunityLineItem to call the Trigger
+        delete oppLine1;
+        
+        Test.startTest();
+        Set<Id> allOppIds = new Set<Id>();
+        
+        //Fetch Opportunity Id
+        for(OpportunityLineItem oli : newList) {
+            allOppIds.add(oli.OpportunityId);
+        } 
+        List<Installation__c> updateins = new list<Installation__c>();
+        //Fetch OppLineItemsrelated Opportunity Id
+        List<Opportunity> oppList = [SELECT Id, Name, First_Month_Free__c, Total_Cost_Of_Products__c, 
+                                     (SELECT Id, Product2.name
+                                      FROM OpportunityLineItems)
+                                     FROM Opportunity WHERE Id=:allOppIds]; 
+        
+        List<Opportunity> UpdateOpp = new List<Opportunity>();
+        
+        //Loop through all records to find out the product name does not contains 'Cloud Storage' and Update  installation__c
+        for(Opportunity o: oppList){
+            for(OpportunityLineItem li: o.OpportunityLineItems){
+                system.debug('*******'+li.Product2.Name);
+                
+                if(!li.Product2.Name.contains('First Month Free') && o.First_Month_Free__c == True){
+                    system.debug('****');
+                    o.First_Month_Free__c = False;
+                    UpdateOpp.add(o);  
+                }
+                break;
+            }
+        }
+        //Update Installation Product
+        update UpdateOpp;
+        Test.stopTest();
+    }
+}

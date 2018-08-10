@@ -1,0 +1,44 @@
+public class AutoFollowUser {
+    
+    public static void autoFollowOpp(List<Opportunity> newList){
+        
+        try{
+            
+            Set<Id> oppId = new Set<Id>();
+            
+            for(Opportunity op: newList){
+                oppId.add(op.id);
+            } 
+            
+            List<EntitySubscription> es = new List<EntitySubscription>();
+            
+            List<Opportunity> opList = [select id, name, HPO__c, ExecutiveSponsor__c from Opportunity where id =:oppId];
+            
+            System.debug('Opportunity Values:'+opList);
+            
+            for(Opportunity op2 : opList){
+                
+                if(op2.HPO__c == True && op2.ExecutiveSponsor__c != Null){
+                    
+                    User u = [Select id, name from User where id = :op2.ExecutiveSponsor__c];
+                    
+                    System.debug('Opportunity Values:'+u);
+                    EntitySubscription followed = new EntitySubscription(SubscriberId = u.id,
+                                                                         ParentId = op2.id);
+                    es.add(followed);
+                }        
+            }
+            
+            Map<id,EntitySubscription> esmap = new Map<id,EntitySubscription>();
+            esmap.putAll(es);
+            
+            if(esmap.size() > 0){
+                upsert esmap.values();
+                system.debug(esmap.size()+'Opportunity AutoFollowed sucessfully:'+esmap.values());
+            }
+        }
+        catch(Exception e){
+            System.debug('Error Occured:'+e.getMessage());
+        }
+    }
+}

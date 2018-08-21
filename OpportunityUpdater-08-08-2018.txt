@@ -1,0 +1,205 @@
+public class OpportunityUpdater {
+    public static void updateOpp(List<Opportunity> newList){
+        
+        System.debug('***********************************************');
+        
+        Set<Id> oppId = new Set<Id>();
+        
+        for(Opportunity op: newList){
+            oppId.add(op.id);
+        } 
+        
+        List<Opportunity> oppList = [SELECT Id, Name, Account.Carefree_Maintenance_and_Support_Opt_in__c, Account.Monthly_Holiday_Protection_Plan_Opt_in__c,
+                                     Carefree_Maintenance_and_Support_Opt_in__c, Monthly_Holiday_Protection_Plan_Opt_in__c,
+                                     (SELECT Id, Product2.name FROM OpportunityLineItems) 
+                                     FROM Opportunity WHERE Id=:oppId]; 
+        
+        List<Opportunity> UpdateOpp = new List<Opportunity>();
+        List<Account> UpdateAcc = new List<Account>();
+        
+        for(Opportunity opp: oppList){
+            for(OpportunityLineItem oli2: opp.OpportunityLineItems){
+                
+                System.debug('OppLineItems:::'+oli2.Product2.Name);
+                
+                if(oli2.Product2.Name.contains('Carefree Maintenance') && opp.Carefree_Maintenance_and_Support_Opt_in__c == False){
+                    system.debug('*******');
+                    opp.Carefree_Maintenance_and_Support_Opt_in__c = True;
+                    UpdateOpp.add(opp);
+                    
+                    if(opp.Account.Carefree_Maintenance_and_Support_Opt_in__c == False){
+                        opp.Account.Carefree_Maintenance_and_Support_Opt_in__c = true;
+                        UpdateAcc.add(opp.Account);
+                    }
+                }
+                
+                if(oli2.Product2.Name.contains('Holiday Protection') && opp.Monthly_Holiday_Protection_Plan_Opt_in__c == False){
+                    system.debug('*******');
+                    opp.Monthly_Holiday_Protection_Plan_Opt_in__c = True;
+                    UpdateOpp.add(opp);
+                    
+                    if(opp.Account.Monthly_Holiday_Protection_Plan_Opt_in__c == False){
+                        opp.Account.Monthly_Holiday_Protection_Plan_Opt_in__c = true;
+                        UpdateAcc.add(opp.Account);
+                    }
+                }
+            }
+        }
+        
+        Map<id,Account> acmap = new Map<id,Account>();
+        acmap.putAll(UpdateAcc);
+        
+        Map<id,Opportunity> opmap = new Map<id,Opportunity>();
+        opmap.putAll(UpdateOpp);
+        
+        if(opmap.size() > 0){
+            Update opmap.values();
+            system.debug(opmap.size()+'Opportunity Updated sucessfully:'+opmap.values());
+        }
+        if(acmap.size() > 0){
+            Update acmap.values();
+            system.debug(acmap.size()+'Account Updated sucessfully:'+acmap.values());
+        }
+    }
+    
+    public static void removeProductName(List<OpportunityLineItem> newList){
+        system.debug('Called from OpportunityLineItem Trigger::::');
+        
+        Set<Id> allOppIds = new Set<Id>();
+        
+        //Get the OpportunityID related to the OpportunityLineItems
+        system.debug('****'+newList);
+        for(OpportunityLineItem oli : newList) {
+            allOppIds.add(oli.OpportunityId);
+            system.debug('****'+allOppIds);
+        }         
+        
+        //Retrieve all the OpportunityLineItems records related to the Opportunity
+        List<Opportunity> oppList = [SELECT Id, Name, AccountId,
+                                     Carefree_Maintenance_and_Support_Opt_in__c, Monthly_Holiday_Protection_Plan_Opt_in__c, 
+                                     (SELECT Id, Product2.name
+                                      FROM OpportunityLineItems)
+                                     FROM Opportunity WHERE Id=:allOppIds]; 
+        
+        
+        List<Opportunity> UpdateOpp2 = new List<Opportunity>();
+        List<Account> UpdateAcct = new List<Account>();
+        
+        //Loop through all records to find out the product name contains 'Carefree Maintenance' or 'Holiday Protection'
+        for(Opportunity o: oppList){
+            for(OpportunityLineItem li: o.OpportunityLineItems){
+                system.debug('*******'+li.Product2.Name);
+                
+                if(li.Product2.Name == Null){
+                    System.debug('Opportunity Line Items are Null');
+                }
+                
+                else if(!li.Product2.Name.contains('Carefree Maintenance') && o.Carefree_Maintenance_and_Support_Opt_in__c == True){
+                    system.debug('****');
+                    o.Carefree_Maintenance_and_Support_Opt_in__c = False;
+                    UpdateOpp2.add(o);  
+                }
+                else if(!li.Product2.Name.contains('Holiday Protection') && o.Monthly_Holiday_Protection_Plan_Opt_in__c == True){
+                    system.debug('****');
+                    o.Monthly_Holiday_Protection_Plan_Opt_in__c = False;
+                    UpdateOpp2.add(o);
+                }
+                else{
+                    system.debug('Condition not matched::::');
+                }
+                break;
+            }
+        }
+        
+        Set<Id> accIds = new Set<Id>();
+        for(Opportunity opt : oppList) {
+            accIds.add(opt.AccountId);
+            system.debug('****'+accIds);
+        }  
+        
+        List<OpportunityLineItem> lineItems = [select Product2.name,
+                                               Opportunity.Carefree_Maintenance_and_Support_Opt_in__c,
+                                               Opportunity.Monthly_Holiday_Protection_Plan_Opt_in__c,
+                                               Opportunity.id, Opportunity.Name,
+                                               Opportunity.Account.Carefree_Maintenance_and_Support_Opt_in__c,
+                                               Opportunity.Account.Monthly_Holiday_Protection_Plan_Opt_in__c,
+                                               Opportunity.Account.Id
+                                               from OpportunityLineItem 
+                                               where Opportunity.Account.Id = :accIds AND (Product2.name like '%Carefree%' OR Product2.name like '%Holiday Protection%')
+                                               AND (Opportunity.Carefree_Maintenance_and_Support_Opt_in__c = True OR Opportunity.Monthly_Holiday_Protection_Plan_Opt_in__c = True)];
+        
+        List<OpportunityLineItem> lineItems2 = [select Product2.name,
+                                               Opportunity.Carefree_Maintenance_and_Support_Opt_in__c,
+                                               Opportunity.Monthly_Holiday_Protection_Plan_Opt_in__c,
+                                               Opportunity.id, Opportunity.Name,
+                                               Opportunity.Account.Carefree_Maintenance_and_Support_Opt_in__c,
+                                               Opportunity.Account.Monthly_Holiday_Protection_Plan_Opt_in__c,
+                                               Opportunity.Account.Id
+                                               from OpportunityLineItem 
+                                               where Opportunity.Account.Id = :accIds AND
+                                                    (Opportunity.Carefree_Maintenance_and_Support_Opt_in__c = True OR Opportunity.Monthly_Holiday_Protection_Plan_Opt_in__c = True)];
+        
+        
+        system.debug('Opportunity Line Items '+lineItems);
+        system.debug('Opportunity Line Items '+lineItems2);
+        
+        if(lineItems.size() > 0){
+            
+            for(OpportunityLineItem oli: lineItems){
+                system.debug('OLI Product Names:'+oli.Product2.Name);
+                system.debug('Opportunity Name:'+oli.Opportunity.Name);
+                
+                if(oli.Product2.Name.contains('Carefree Maintenance') && oli.Product2.Name.contains('Holiday Protection')){
+                    system.debug('Do Nothing On Account'); 
+                    break;
+                }
+                else if(!oli.Product2.Name.contains('Carefree Maintenance')){
+                    oli.Opportunity.Account.Carefree_Maintenance_and_Support_Opt_in__c = False;
+                    UpdateAcct.add(oli.Opportunity.Account);
+                    break;
+                }
+                else if(!oli.Product2.Name.contains('Holiday Protection')){
+                    oli.Opportunity.Account.Monthly_Holiday_Protection_Plan_Opt_in__c = False;
+                    UpdateAcct.add(oli.Opportunity.Account);
+                    break;
+                }
+                else {
+                    system.debug('*************');
+                    oli.Opportunity.Account.Carefree_Maintenance_and_Support_Opt_in__c = False;
+                    oli.Opportunity.Account.Monthly_Holiday_Protection_Plan_Opt_in__c = False;
+                    UpdateAcct.add(oli.Opportunity.Account);
+                    break;
+                }
+                system.debug('Account Going to Update Values::'+UpdateAcct);
+            }
+            
+        }
+        else{
+            for(OpportunityLineItem oli2: lineItems2){
+                system.debug('*************');
+                oli2.Opportunity.Account.Carefree_Maintenance_and_Support_Opt_in__c = False;
+                oli2.Opportunity.Account.Monthly_Holiday_Protection_Plan_Opt_in__c = False;
+                UpdateAcct.add(oli2.Opportunity.Account);
+                break;
+            }
+        }
+        
+        
+        
+        Map<id,Account> acmap = new Map<id,Account>();
+        acmap.putAll(UpdateAcct);
+        
+        Map<id,Opportunity> opmap2 = new Map<id,Opportunity>();
+        opmap2.putAll(UpdateOpp2);
+        
+        if(opmap2.size() > 0){ 
+            Update opmap2.values();
+            system.debug(opmap2.size()+'Opportunity Updated sucessfully:'+opmap2.values());
+        }
+        
+        if(acmap.size() > 0){
+            Update acmap.values();
+            system.debug(acmap.size()+'Account Updated sucessfully:'+acmap.values());
+        }
+    }
+}

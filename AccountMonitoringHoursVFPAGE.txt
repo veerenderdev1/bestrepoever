@@ -1,0 +1,345 @@
+<apex:page standardController="Account" extensions="VFC_MonitoringHours_Ext" showHeader="true" sidebar="true" title="Monitoring Hours: {!Account.Name}">
+    
+    <style type="text/css">
+        .showStatus {
+        position: absolute;
+        overflow: hidden;
+        top: 0px;
+        padding: 0;
+        margin: 0;
+        width: 90%;
+        height: 100%;
+        background: rgba( 255, 255, 255, 0.8 ); /* dimmed */
+        z-index: 1001;
+        visibility: visible;
+        display: block;
+        }
+        .hideStatus {
+        visibility: hidden;
+        display: none;
+        }
+        .animatedStatus {
+        display: block;
+        position: absolute;
+        top: 100px;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin-left: auto;
+        margin-right: auto;
+        z-index: 1002;
+        }
+        .noMonitoring {
+        width: 10%;
+        }
+        .guardTourHeader, .guardTourItems {
+        text-align: center;
+        }
+        .guardTourTable {
+        width: 550px;
+        background-color: white;
+        }
+        .guardTourMinutes {
+        width: 50px;
+        }
+        .hourMinuteInput {
+        width: 43px;
+        }
+        .scheduleHeader { 
+        width: 100%; 
+        text-align: center;
+        }
+        .scheduleStartStopHeader {
+        width: 50%; 
+        float: left;
+        }
+        .scheduleInput {
+        width: 45%; 
+        float: left;
+        text-align: center;
+        border: solid 1px whitesmoke;
+        padding: 0px;
+        margin: 0px;
+        }
+    </style>
+    
+    <apex:form id="theForm">
+        
+        <apex:sectionHeader title="Monitoring Hours for Site" subtitle="{!Account.Name}" />
+        
+        <apex:pageMessages id="errorMessage" escape="false" />
+        
+        <apex:actionStatus id="ajaxStatus" layout="block"
+                           startStyleClass="showStatus" stopStyleClass="hideStatus" >
+            <apex:facet name="start">
+                <apex:image value="/img/loading32.gif" styleClass="animatedStatus" />
+            </apex:facet>
+        </apex:actionStatus>
+        
+        <!-- when the monitoring service is changed to Virtual Guard, enable the guard tour fields -->
+        <apex:actionFunction name="serviceChanged" action="{!changedMonitoringService}"
+                             reRender="thePageBlock,pbSection2,guardTourOnly,schedulePanel" status="ajaxStatus" />
+        
+        <!-- when the user checks 24 hour, the corresponding day is checked too -->
+        <apex:actionFunction name="clicked24Hour" action="{!clicked24Hour}" 
+                             reRender="schedulePanel" status="ajaxStatus" />
+        
+        <!-- when the user checks No Monitoring, all days are unselected -->
+        <!--
+<apex:actionFunction name="clickedNoMonitoring" action="{!clickedNoMonitoring}"
+reRender="schedulePanel" status="ajaxStatus" />
+-->
+        
+        <!-- when the user selects a day, No Monitoring is unselected -->
+        <apex:actionFunction name="clickedDay" action="{!clickedDay}"
+                             reRender="pbSection2,schedulePanel" status="ajaxStatus" />
+        
+        <apex:pageBlock id="thePageBlock" title="Configure Monitoring Information"
+                        rendered="{! i != null }" >
+            <apex:pageBlockButtons id="buttonBlock" location="both">
+                <apex:commandButton value="Update" action="{!save}" 
+                                    status="ajaxStatus" reRender="thePageBlock,errorMessage"
+                                    rendered="{! i != null }" />
+                <apex:commandButton value="Cancel" action="{!cancel}" 
+                                    status="ajaxStatus" reRender="thePageBlock,errorMessage" />
+            </apex:pageBlockButtons>
+            
+            <apex:pageBlockSection id="pbSectionTop" columns="2">
+                <!--
+<apex:outputText value="Configure Monitoring Information" />
+-->
+                
+                <apex:pageBlockSectionItem id="pbsectionItem">
+                    <apex:outputLabel for="monitorService" 
+                                      value="{!$ObjectType.Installation__c.fields.Monitoring_Service__c.label}:" />
+                    <apex:outputPanel layout="block" styleClass="requiredInput">
+                        <apex:outputPanel layout="block" styleClass="requiredBlock" />
+                        <apex:inputField id="monitorService" 
+                                         value="{!i.Monitoring_Service__c}" onchange="return monitoringChange(this);" />
+                    </apex:outputPanel>
+                </apex:pageBlockSectionItem>
+                
+                <apex:pageBlockSection >
+                    <apex:outputLabel for="timeZone" styleClass="labelCol"
+                                      value="{!$ObjectType.Installation__c.fields.Time_Zone__c.label}:" />
+                    <apex:outputPanel layout="block" styleClass="requiredInput">
+                        <apex:outputPanel layout="block" styleClass="requiredBlock" />
+                        <apex:inputField id="timeZone" value="{!i.Time_Zone__c}" />
+                    </apex:outputPanel>
+                </apex:pageBlockSection>
+                
+            </apex:pageBlockSection>
+            
+            <apex:outputPanel layout="block"
+                              rendered="{! i.Monitoring_Service__c == 'Virtual Guard Tour' }">
+                <apex:pageBlockSection id="pbSection2" columns="2" >
+                    <!--
+<apex:inputField id="noMonitoring" onchange="clickedNoMonitoring();"
+value="{!i.No_Monitoring__c}" styleClass="noMonitoring" />
+-->
+                    <!--
+<apex:outputPanel id="guardTourPlaceholder" layout="block"
+rendered="{! i.Monitoring_Service__c != 'Virtual Guard Tour' }" >
+</apex:outputPanel>
+-->
+                    <apex:outputPanel id="guardTourOnly" layout="block" >
+                        <table class="guardTourTable">
+                            <thead>
+                                <th colspan="2" class="guardTourHeader">
+                                    <apex:outputLabel id="guardTourHeader" 
+                                                      styleClass="guardTourHeader" value="Guard Tour Only" />
+                                </th>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="guardTourItems">
+                                        <apex:outputLabel for="guardTourInterval"
+                                                          styleClass="labelCol" value="Interval" />
+                                        <apex:inputField id="guardTourInterval"
+                                                         value="{!i.Guard_Tour_Interval_Mins__c}" styleClass="guardTourMinutes" />
+                                        <apex:outputLabel for="guardTourInterval"
+                                                          styleClass="labelCol" value="Mins." />
+                                    </td>
+                                    <td class="guardTourItems">
+                                        <apex:outputLabel for="guardTourDuration"
+                                                          styleClass="labelCol" value="Duration" />
+                                        <apex:inputField id="guardTourDuration"
+                                                         value="{!i.Guard_Tour_Duration_Mins__c}"
+                                                         styleClass="guardTourMinutes" />
+                                        <apex:outputLabel for="guardTourDuration"
+                                                          styleClass="labelCol" value="Mins." />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </apex:outputPanel>
+                </apex:pageBlockSection>
+            </apex:outputPanel>
+            
+            <apex:outputPanel id="schedulePanel" layout="block" >
+                <apex:pageBlockTable id="scheduleTable" var="d" value="{!weekdayList}">
+                    
+                    <!-- Monitoring Day checkbox -->
+                    <apex:column >
+                        <apex:facet name="header">Monitoring Day</apex:facet>
+                        
+                        <apex:inputCheckbox id="daySelected" value="{!d.daySelected}" 
+                                            onchange="clickedDay();" />
+                        <apex:outputLabel for="daySelected" value="{!d.day}" />
+                    </apex:column>
+                    
+                    <!-- AM Schedule select boxes -->
+                    <apex:column >
+                        <apex:facet name="header">
+                            <apex:outputPanel layout="block" styleClass="scheduleHeader">
+                                <apex:outputLabel value="AM Schedule" /><br />
+                                <apex:outputPanel layout="block" styleClass="scheduleStartStopHeader">
+                                    <apex:outputLabel value="Start" />
+                                </apex:outputPanel>
+                                <apex:outputPanel layout="block" styleClass="scheduleStartStopHeader">
+                                    <apex:outputLabel value="Stop" />
+                                </apex:outputPanel>
+                            </apex:outputPanel>
+                        </apex:facet>
+                        
+                        <apex:outputPanel layout="block" styleClass="scheduleInput">
+                            <apex:selectList value="{!d.startAM}" styleClass="hourMinuteInput" size="1" >
+                                <apex:selectOptions value="{!hourAMList}" />
+                            </apex:selectList>
+                            <apex:outputLabel value=":" />
+                            <apex:selectList value="{!d.startMinuteAM}" styleClass="hourMinuteInput"
+                                             size="1" >
+                                <apex:selectOptions value="{!minuteList}" />
+                            </apex:selectList>
+                        </apex:outputPanel>
+                        <apex:outputPanel layout="block" styleClass="scheduleInput">
+                            <apex:selectList value="{!d.stopAM}" styleClass="hourMinuteInput" size="1" >
+                                <apex:selectOptions value="{!hourAMList}" />
+                            </apex:selectList>
+                            <apex:outputLabel value=":" />
+                            <apex:selectList value="{!d.stopMinuteAM}" styleClass="hourMinuteInput"
+                                             size="1" >
+                                <apex:selectOptions value="{!minuteList}" />
+                            </apex:selectList>
+                        </apex:outputPanel>
+                    </apex:column>
+                    
+                    <!-- PM Schedule select boxes -->
+                    <apex:column style="padding:0px; margin:0px;">
+                        <apex:facet name="header">
+                            <apex:outputPanel layout="block" styleClass="scheduleHeader">
+                                <apex:outputLabel value="PM Schedule" /><br />
+                                <apex:outputPanel layout="block" styleClass="scheduleStartStopHeader">
+                                    <apex:outputLabel value="Start" />
+                                </apex:outputPanel>
+                                <apex:outputPanel layout="block" styleClass="scheduleStartStopHeader">
+                                    <apex:outputLabel value="Stop" />
+                                </apex:outputPanel>
+                            </apex:outputPanel>
+                        </apex:facet>
+                        
+                        <apex:outputPanel layout="block" styleClass="scheduleInput">
+                            <apex:selectList value="{!d.startPM}" styleClass="hourMinuteInput" size="1" >
+                                <apex:selectOptions value="{!hourPMList}" />
+                            </apex:selectList>
+                            <apex:outputLabel value=":" />
+                            <apex:selectList value="{!d.startMinutePM}" styleClass="hourMinuteInput"
+                                             size="1" >
+                                <apex:selectOptions value="{!minuteList}" />
+                            </apex:selectList>
+                        </apex:outputPanel>
+                        <apex:outputPanel layout="block" styleClass="scheduleInput">
+                            <apex:selectList value="{!d.stopPM}" styleClass="hourMinuteInput" size="1" >
+                                <apex:selectOptions value="{!hourPMList}" />
+                            </apex:selectList>
+                            <apex:outputLabel value=":" />
+                            <apex:selectList value="{!d.stopMinutePM}" styleClass="hourMinuteInput"
+                                             size="1" >
+                                <apex:selectOptions value="{!minuteList}" />
+                            </apex:selectList>
+                        </apex:outputPanel>
+                    </apex:column>
+                    
+                    <!-- 24 Hour checkbox -->
+                    <apex:column >
+                        <apex:facet name="header">24 Hour</apex:facet>
+                        
+                        <apex:inputCheckbox value="{!d.twentyFourHour}" onchange="clicked24Hour();" />
+                    </apex:column>
+                </apex:pageBlockTable>
+            </apex:outputPanel>
+            
+            <apex:pageBlockSection columns="1" >
+                <apex:pageBlockTable id="pbtInstallSelection" value="{!installList}" var="i" >
+                    <apex:column >
+                        <apex:facet name="header">
+                            <apex:inputCheckbox value="{!selectAll}">
+                                <apex:actionSupport event="onclick" action="{!resetSelection}" 
+                                                    status="ajaxStatus" reRender="pbtInstallSelection" />
+                            </apex:inputCheckbox>
+                        </apex:facet>
+                        <apex:inputCheckbox value="{!installSelectionMap[ i.ID ]}" >
+                            <apex:actionSupport event="onclick" action="{!syncSelection}"
+                                                reRender="pbtInstallSelection" />
+                        </apex:inputCheckbox>
+                    </apex:column>
+                    <apex:column headerValue="{!$ObjectType.Installation__c.fields.Name.label}">
+                        <apex:outputLink value="/{!i.ID}" >{!i.Name}</apex:outputLink>
+                    </apex:column>
+                    <apex:column value="{!i.Unit__r.Name}" />
+                    <apex:column value="{!i.Product__r.Name}" />
+                    <apex:column value="{!i.Status__c}" />
+                    <apex:column value="{!i.Installed_Date__c}" />
+                </apex:pageBlockTable>
+            </apex:pageBlockSection>
+            
+        </apex:pageBlock>
+        
+    </apex:form>
+    <script type="text/javascript">
+    function monitoringChange(data){
+        
+        // var myPicklistElement = document.getElementById('{!$Component.theForm.thePageBlock.pbSectionTop.pbsectionItem.monitorService}');
+        // var myPicklistValue = myPicklistElement.options[myPicklistElement.selectedIndex];
+         
+        var temp;
+        temp = data.selectedIndex;
+        // alert(temp);
+          if(data.value == "Live"){
+            var y1=confirm("Please Note: By clicking OK you acknowledge that you have changed monitoring from Client to Live.");
+            if(y1){
+                serviceChanged();
+                return true;
+            }
+            else{
+                data.selectedIndex = 1;
+                return false;
+            }
+        }
+        if(data.value == "Client"){
+            var y2=confirm("Please Note: By clicking OK you acknowledge that you have changed monitoring from Live to Client.");
+            if(y2){
+                serviceChanged();
+                return true;
+            }
+            else{
+                data.selectedIndex = 2;
+                return false;
+            }
+        }
+        
+        if(data.value == "Virtual Guard Tour"){
+            var y2=confirm("Please Note: By clicking OK you acknowledge that you have thoroughly checked over the record.");
+            if(y2){
+                serviceChanged();
+                return true;
+            }
+            else{
+                data.selectedIndex = 2;
+                return false;
+            }
+        } 
+    }
+    </script>
+    
+</apex:page>

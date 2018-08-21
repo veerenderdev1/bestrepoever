@@ -1,0 +1,43 @@
+/**********************************************************************
+* Name:     CaseTrigger
+* Author:   Strategic Growth, Inc. (www.strategicgrowthinc.com)
+*  
+* ======================================================
+* ======================================================
+* Purpose:                                                      
+* 
+* ======================================================
+* ======================================================
+* History:                                                            
+* VERSION   DATE            INITIALS      DESCRIPTION/FEATURES ADDED
+* 1.0       04-Mar-2016     rwd           Initial Development           
+*   
+***********************************************************************/
+
+
+trigger CaseTrigger on Case (after insert, after update) {
+    
+    if ( SG_ApexActivator.isDisabled('Disable_Case_Triggers__c'))
+    {
+        System.debug('---> CaseTrigger; this trigger has been disabled via Custom Setting');
+        return;
+    }
+    
+    if ( Trigger.isAfter )
+    {
+        if ( Trigger.isInsert || Trigger.isUpdate )
+        {
+            EmailNotificationHelper notifyHelper = new EmailNotificationHelper();
+            notifyHelper.notifyOnCase(Trigger.new, Trigger.oldMap, false);
+            
+            if ( !RecursiveTriggerHelper.isAlreadyModified() )
+            {
+                RecursiveTriggerHelper.setAlreadyModified();
+                //Notify Contacts..
+                if(Trigger.isUpdate)
+                CaseHelper.notifyToContacts(Trigger.new, Trigger.oldMap);
+                CaseHelper.updateOppsForClosedInstallCases(Trigger.new, Trigger.oldMap);
+            }
+        }
+    }    
+}

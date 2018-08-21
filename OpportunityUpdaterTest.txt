@@ -1,0 +1,174 @@
+@isTest
+public class OpportunityUpdaterTest {
+    @isTest
+    public static void UpdateOppTestMethod(){
+        
+        //Create Test Account
+        Account a = new Account();
+        a.Name = 'Test';
+        insert a;
+        
+        Date closeDt = Date.Today();
+        
+        //Fetch Standard Price Book ID
+        Id pricebookId = Test.getStandardPricebookId();
+        
+        //Create Test Products
+        Product2 prd1 = new Product2 (Name='Fixed - Cloud Storage per Camera (15 Days)', Description='Test Product Entry 1', Storage_Days__c = 45, productCode = 'ABC', isActive = true);
+        insert prd1;
+        
+        Product2 prd2 = new Product2 (Name='Monthly Holiday Protection Plan', Description='Test Product Entry 2', Storage_Days__c = 60, productCode = 'ABD', isActive = true);
+        insert prd2;
+        
+        //Create Test PricebookEntrys
+        PricebookEntry pbe1 = new PricebookEntry (Product2ID=prd1.id, Pricebook2ID=pricebookId, UnitPrice=50, isActive=true);
+        insert pbe1;
+        
+        PricebookEntry pbe2 = new PricebookEntry (Product2ID=prd2.id, Pricebook2ID=pricebookId, UnitPrice=60, isActive=true);
+        insert pbe2;
+        
+        //Create Test opportunity
+        opportunity oppr = new opportunity(Name='Test Opportunity' , Pricebook2Id = pbe1.Pricebook2Id, AccountId=a.Id, StageName = 'Prospecting', CloseDate = closeDt);
+        insert oppr;
+        
+        //Create Test OpportunityLineItems
+        OpportunityLineItem oppLine1 = new OpportunityLineItem(pricebookentryid = pbe1.Id, 
+                                                               TotalPrice = 2000, Quantity = 2, OpportunityID = oppr.Id);
+        insert oppLine1;
+        
+        OpportunityLineItem oppLine2 = new OpportunityLineItem(pricebookentryid = pbe2.Id, 
+                                                               TotalPrice = 3000, Quantity = 3, OpportunityID = oppr.Id);
+        insert oppLine2;
+        
+        Test.startTest();
+        
+        List<Opportunity> newList = new List<Opportunity>();
+        
+        Set<Id> opId = new Set<Id>();
+        
+        for(Opportunity op: newList){
+            opId.add(op.id);
+            system.debug('Opportunity id:'+opId);
+        } 
+        
+        List<Opportunity> oppList = [SELECT Id, Name, Carefree_Maintenance_and_Support_Opt_in__c, Monthly_Holiday_Protection_Plan_Opt_in__c, (SELECT Id, Product2.name
+                                                                                                                                              FROM OpportunityLineItems) 
+                                     FROM Opportunity WHERE Id=:opId]; 
+        
+        List<Opportunity> UpdateOpp = new List<Opportunity>();
+        
+        for(Opportunity opp: oppList){
+            for(OpportunityLineItem oli2: opp.OpportunityLineItems){
+                
+                if(oli2.Product2.Name.contains('Carefree Maintenance') && opp.Carefree_Maintenance_and_Support_Opt_in__c == False){
+                    opp.Carefree_Maintenance_and_Support_Opt_in__c = True;
+                    UpdateOpp.add(opp);
+                }
+                
+                if(oli2.Product2.Name.contains('Holiday Protection Plan') && opp.Monthly_Holiday_Protection_Plan_Opt_in__c == False){
+                    opp.Monthly_Holiday_Protection_Plan_Opt_in__c = True;
+                    UpdateOpp.add(opp);
+                }
+            }
+        }
+        
+        Map<id,Opportunity> opmap = new Map<id,Opportunity>();
+        opmap.putAll(UpdateOpp);
+        
+        if(opmap.size() > 0){
+            Update opmap.values();
+            system.debug(opmap.size()+'Opportunity Updated sucessfully:'+opmap.values());
+        }
+        Test.stopTest();
+    }
+    
+    @isTest
+    public static void removeProductTestMethod(){
+        
+        List<OpportunityLineItem> newList = new List<OpportunityLineItem>();
+        
+        //Create Test Account
+        Account a = new Account();
+        a.Name = 'Test';
+        insert a;
+        
+        Date closeDt = Date.Today();
+        
+        //Fetch Standard Price Book ID
+        Id pricebookId = Test.getStandardPricebookId();
+        
+        //Create Test Products
+        Product2 prd1 = new Product2 (Name='Carefree Maintenance', Description='Test Product Entry 1', Storage_Days__c = 45, productCode = 'ABC', isActive = true);
+        insert prd1;
+        
+        Product2 prd2 = new Product2 (Name='Test Product Entry 2', Description='Test Product Entry 2', productCode = 'ABD', isActive = true);
+        insert prd2;
+        
+        //Create Test PricebookEntrys
+        PricebookEntry pbe1 = new PricebookEntry (Product2ID=prd1.id, Pricebook2ID=pricebookId,UnitPrice=50, isActive=true);
+        insert pbe1;
+        
+        PricebookEntry pbe2 = new PricebookEntry (Product2ID=prd2.id, Pricebook2ID=pricebookId,UnitPrice=60, isActive=true);
+        insert pbe2;
+        
+        //Create Test opportunity
+        opportunity oppr = new opportunity(Name='Test Opportunity' , Pricebook2Id = pbe1.Pricebook2Id, AccountId=a.Id, StageName = 'Prospecting', CloseDate = closeDt);
+        insert oppr;
+        
+        //Create Test OpportunityLineItems
+        OpportunityLineItem oppLine1 = new OpportunityLineItem(pricebookentryid = pbe1.Id, 
+                                                               TotalPrice = 2000, Quantity = 2, OpportunityID = oppr.Id);
+        insert oppLine1;
+        
+        OpportunityLineItem oppLine2 = new OpportunityLineItem(pricebookentryid = pbe2.Id, 
+                                                               TotalPrice = 3000, Quantity = 3, OpportunityID = oppr.Id);
+        insert oppLine2;
+        
+        //Delete OpportunityLineItem to call the Trigger
+        delete oppLine1;
+        
+        Test.startTest();
+        Set<Id> allOppIds = new Set<Id>();
+        
+        //Fetch Opportunity Id
+        for(OpportunityLineItem oli : newList) {
+            allOppIds.add(oli.OpportunityId);
+        } 
+        
+        List<Opportunity> UpdateOpp2 = new List<Opportunity>();
+        
+        //Fetch Opportunity record
+        List<Opportunity> oppList = [SELECT Id, Name, Carefree_Maintenance_and_Support_Opt_in__c, Monthly_Holiday_Protection_Plan_Opt_in__c, 
+                                     (SELECT Id, Product2.name, Product2.Storage_Days__c
+                                      FROM OpportunityLineItems)
+                                     FROM Opportunity WHERE Id=:allOppIds];         
+        
+        
+        //Loop through all records to find out the product name does not contains 'Carefree Maintenance'  or 'Holiday Protection Plan'
+        for(Opportunity o: oppList){
+            for(OpportunityLineItem li: o.OpportunityLineItems){
+                
+                if(!li.Product2.Name.contains('Carefree Maintenance') && o.Carefree_Maintenance_and_Support_Opt_in__c == True){
+                    o.Carefree_Maintenance_and_Support_Opt_in__c = False;
+                    UpdateOpp2.add(o);   
+                }
+                
+                if(!li.Product2.Name.contains('Holiday Protection Plan') && o.Monthly_Holiday_Protection_Plan_Opt_in__c == True){
+                    o.Monthly_Holiday_Protection_Plan_Opt_in__c = False;
+                    UpdateOpp2.add(o);
+                }
+                break;
+            }
+        }
+        
+        Map<id,Opportunity> opmap2 = new Map<id,Opportunity>();
+        opmap2.putAll(UpdateOpp2);
+        
+        if(opmap2.size() > 0){
+            Update opmap2.values();
+            system.debug(opmap2.size()+'Opportunity Updated sucessfully:'+opmap2.values());
+        }
+        
+        Test.stopTest();
+    }
+}

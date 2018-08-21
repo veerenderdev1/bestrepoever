@@ -1,0 +1,793 @@
+public without sharing class VFC_PIQ {
+    public Integer view { get; set; }
+    
+    public PIQ__c p { get; set; }
+    public PIQ_Response__c p2 { get; set;}
+    public Opportunity o { get; set; }
+    public boolean showFields {get; set;}
+    public String SelectedVal {get; set;}
+    
+    //public String opptyName { get; set; }
+    //public String salesRepName { get; set; }
+    //public String contactName { get; set; }
+    //public String companyName { get; set; }
+    public String monitoringHours { get; set; }
+    public String accountManager { get; set; }
+    
+    public List<SelectOption> userList {
+        get{
+            if( userList == null ) {
+                userList = new List<SelectOption>();
+                userList.add( new SelectOption( '', 'Don\'t Know' ) );
+                List<User> uL = [ SELECT ID, Name 
+                                 FROM User 
+                                 WHERE IsActive = true ];
+                for( User u : uL ) {
+                    userList.add( new SelectOption( u.ID, u.Name ) );
+                }
+                system.debug( userList );
+            }
+            return userList;
+        }
+        set;
+    }
+    
+    public List<SelectOption> leadSourceList {
+        get{
+            if( leadSourceList == null ) {
+                leadSourceList = getPicklist( Opportunity.LeadSource );
+            }
+            return leadSourceList;
+        }
+        set;
+    }
+    
+    public List<SelectOption> siteTypeList {
+        get{
+            if( siteTypeList == null ) {
+                siteTypeList = getPicklist( Account.Site_Type__c );
+            }
+            return siteTypeList;
+        }
+        set;
+    }
+    
+    public List<SelectOption> IndustryTypeList {
+        get{
+            if( IndustryTypeList == null ) {
+                IndustryTypeList = getPicklist( Account.Industry);
+            }
+            system.debug('====Industry=='+IndustryTypeList);
+            return IndustryTypeList;
+        }
+        set;
+    }
+    
+    public List<SelectOption> stateList {
+        get{
+            if( stateList == null ) {
+                stateList = getPicklist( User.statecode);
+            }
+            system.debug('====codes=='+stateList);
+            return stateList;
+        }
+        set;
+    }
+    public List<SelectOption> stateList1 {
+        get{
+            if( stateList1 == null ) {
+                stateList1 = getPicklist( Account.State_of_Incorporation__c);
+            }
+            //system.debug('====codes=='+stateList);
+            return stateList1;
+        }
+        set;
+    }
+    
+    public List<SelectOption> notifyMethodList {
+        get{
+            if( notifyMethodList == null ) {
+                notifyMethodList = getPicklist( Account.Outage_Notification_Method__c );
+            }
+            return notifyMethodList;
+        }
+        set;
+    }
+    
+    public List<SelectOption> secondarySecurityList {
+        get{
+            if( secondarySecurityList == null ) {
+                secondarySecurityList = getPicklist( Account.Secondary_Security_SSS__c );
+            }
+            return secondarySecurityList;
+        }
+        set;
+    }
+    
+    public List<SelectOption> timeLapseList {
+        get {
+            if( timeLapseList == null ) {
+                timeLapseList = getPicklist( Opportunity.Time_Lapse__c );
+            }
+            return timeLapseList;
+        }
+        set;
+    }
+    
+    public List<SelectOption> zoomCameraList {
+        get {
+            if( zoomCameraList == null ) {
+                zoomCameraList = getPicklist( Opportunity.HD_Pan_Tilt_Zoom_Camera__c );
+            }
+            return zoomCameraList;
+        }
+        set;
+    }
+    public List<SelectOption> weekendCoverageList {
+        get {
+            if( weekendCoverageList == null ) {
+                weekendCoverageList = getPicklist( Opportunity.Weekend_Day_Time_Coverage__c );
+            }
+            return weekendCoverageList;
+        }
+        set;
+    }
+    public List<SelectOption> protectionPlanList {
+        get {
+            if( protectionPlanList == null ) {
+                protectionPlanList = getPicklist( Opportunity.Protection_Plan__c );
+            }
+            return protectionPlanList;
+        }
+        set;
+    }
+    public List<SelectOption> solarLightList {
+        get {
+            if( solarLightList == null ) {
+                solarLightList = getPicklist( Opportunity.Motion_Solar_Light__c );
+            }
+            return solarLightList;
+        }
+        set;
+    }
+    
+    public static List<SelectOption> getPicklist( Schema.SObjectField f ) {
+        List<SelectOption> theList = new List<SelectOption>();
+        Schema.DescribeFieldResult fr = f.getDescribe();
+        List<Schema.PicklistEntry> pleList = fr.getPicklistValues();
+        theList.add( new SelectOption( '', '' ) );
+        for( Schema.PicklistEntry p : pleList ) {
+            theList.add( new SelectOption( p.getValue(), p.getLabel() ) );
+        }
+        system.debug( theList );
+        return theList;
+    }
+    
+    public VFC_PIQ() {
+        
+        showFields = false;
+        SelectedVal = '';
+        
+        String viewParam = ApexPages.currentPage().getParameters().get( 'page' );
+        if( viewParam == null ) {
+            view = 1;
+        } else {
+            view = Integer.valueOf( viewParam );
+        }
+        
+        String idParam = ApexPages.currentPage().getParameters().get( 'id' );
+        if( idParam == null ) {
+            view = 0;
+            ApexPages.addMessage( new ApexPages.message( ApexPages.severity.ERROR
+                                                        , 'Invalid parameter.' ) );
+            return;
+        }
+        
+        
+        String idFieldName = 'Unique_ID__c';
+        if( idParam.startsWith( '006' ) ) {
+            idFieldName = 'ID';
+        }
+        
+        String SOQLquery = 'SELECT ID, Name, OwnerID, Owner.Name, LeadSource, RecordTypeID'
+            + ', PiQ_Contact__c, PiQ_Contact__r.Name'
+            + ', Contract_Expiration_Date__c, What_is_being_monitored__c'
+            + ', AccountID, Property_Owner_Name__c, Property_Owner_Company_Name__c,Account.Name, Account.Site_Type__c'
+            + ', Account.Occupied__c, Account.Project_Completion_Date__c'
+            + ', Account.ShippingStreet, Account.ShippingCity'
+            + ', Account.ShippingStateCode, Account.ShippingPostalCode'
+            + ', Account.Time_Zone__c, Account.Activity_Email__c'
+            + ', Account.Notifiy_via_email_on_arm_or_disarm__c'
+            + ', Account.Outage_Notification_Method__c'
+            + ', Account.Activity_SMS__c, Account.Maintenance_Instructions__c'
+            + ', Account.User_name__c, Account.Password__c'
+            + ', Account.Invoice_Delivery_Method__c, Account.Tax_Exempt__c'
+            + ', Billing_Contact__c, Billing_Contact__r.Name, Billing_Contact_Phone__c'
+            + ', Billing_Contact_Email__c, Purchase_Order_Number__c'
+            + ', Account.BillingStreet, Account.BillingCity'
+            + ', Account.BillingStateCode, Account.BillingPostalCode'
+            + ', Account.Secondary_Security_SSS__c, Account.SSS_Contact__c'
+            + ', Account.Cross_Street_1__c, Account.Cross_Street_2__c'
+            + ', Account.X1st_Emergency_Contact_txt__c, Account.X2nd_Emergency_Contact_txt__c'
+            + ', Account.Local_Police__c, Account.Police_Department_Name__c'
+            + ', Account.Contact_Owner__c, Account.Safe_Word__c'
+            + ', Account.Gate_Code__c, Account.Site_Description__c'
+            + ', HD_Pan_Tilt_Zoom_Camera__c, Weekend_Day_Time_Coverage__c'
+            + ', Time_Lapse__c, Protection_Plan__c, Motion_Solar_Light__c'
+            + ', PIQ_Received__c, Account.Industry' 
+            + ', Account.Customer_Office_Hours__c'
+            + ', Account.Primary_Contact__c'
+            + ', Account.State_of_Incorporation__c'
+            + ', Project_Name__c, Property_Owner_Address__c, Property_Owner_City__c, Property_Owner_State__c'
+            + ', Property_Owner_Postal_Code__c, General_Contractor_Name__c, General_Contractor_Company_Name__c'
+            + ', General_Contractor_Address__c, General_Contractor_City__c, General_Contractor_State__c'
+            + ', Federal_ID_No__c, General_Contractor_Postal_Code__c'
+            
+            + ' FROM Opportunity '
+            + 'WHERE ' + idFieldName + ' = \'' + idParam + '\'';
+         //+ ', Account.X1st_Emergency_Contact__c, Account.X2nd_Emergency_Contact__c'
+        //+ ', Account.X1st_Emergency_Contact__r.Name, Account.X2nd_Emergency_Contact__r.Name'
+        try {
+            o = Database.query( SOQLquery );
+        } catch( Exception e ) {
+            view = 0;
+            ApexPages.addMessage( new ApexPages.message( ApexPages.severity.ERROR
+                                                        , 'Invalid parameter.' ) );
+            ApexPages.addMessages( e );
+            return;
+        }
+        
+        p = new PIQ__c();
+        p.Contract_Expiration_Date__c = o.Contract_Expiration_Date__c;
+        //p.Project_Completion_Date__c = o.Account.Project_Completion_Date__c;
+        p.Opportunity_Name__c = o.Name;
+        p.Contact_Name__c = o.PiQ_Contact__r.Name;
+        p.Company_Name__c = o.Account.Name;
+        p.Sales_Rep_Name__c = o.Owner.Name;
+        p.Site_Type__c = o.Account.Site_Type__c;
+        p.industry_Type__c = o.Account.Industry;
+        p.Occupied__c = o.Account.Occupied__c;
+        p.Shipping_Street__c = o.Account.ShippingStreet;
+        p.Shipping_City__c = o.Account.ShippingCity;
+        p.Shipping_State__c = o.Account.ShippingStateCode;
+        p.Shipping_PostalCode__c = o.Account.ShippingPostalCode;
+        p.Time_Zone__c = o.Account.Time_Zone__c;
+        p.Activity_Email__c = o.Account.Activity_Email__c;
+        p.Notifiy_via_email_on_arm_or_disarm__c = o.Account.Notifiy_via_email_on_arm_or_disarm__c;
+        p.Outage_Notification_Method__c = o.Account.Outage_Notification_Method__c;
+        p.Activity_SMS__c = o.Account.Activity_SMS__c;
+        p.Username__c = o.Account.User_name__c;
+        p.Password__c = o.Account.Password__c;
+        p.Maintenance_Instructions__c = o.Account.Maintenance_Instructions__c;
+        p.Invoice_Delivery_Method__c = o.Account.Invoice_Delivery_Method__c;
+        p.Billing_Contact_Name__c = o.Billing_Contact__r.Name;
+        p.Billing_Phone__c = o.Billing_Contact_Phone__c;
+        p.Billing_Contact_Email__c = o.Billing_Contact_Email__c;
+        p.Purchase_Order_Number__c = o.Purchase_Order_Number__c; 
+        p.Tax_Exempt__c = o.Account.Tax_Exempt__c;
+        p.Billing_Street__c = o.Account.BillingStreet;
+        p.Billing_City__c = o.Account.BillingCity;
+        p.Billing_State__c = o.Account.BillingStateCode;
+        p.Billing_Postal_Code__c = o.Account.BillingPostalCode;
+        p.Secondary_Security_SSS__c = o.Account.Secondary_Security_SSS__c;
+        p.SSS_Contact__c = o.Account.SSS_Contact__c;
+        p.Cross_Street_1__c = o.Account.Cross_Street_1__c;
+        p.Cross_Street_2__c = o.Account.Cross_Street_2__c;
+        p.X1st_Emergency_Contact__c = o.Account.X1st_Emergency_Contact_txt__c;
+        p.X2nd_Emergency_Contact__c = o.Account.X2nd_Emergency_Contact_txt__c;
+        p.Local_Police__c = o.Account.Local_Police__c;
+        p.Police_Department_Name__c = o.Account.Police_Department_Name__c;
+        p.Contact_Owner__c = o.Account.Contact_Owner__c;
+        p.Safe_Word__c = o.Account.Safe_Word__c;
+        p.Gate_Code__c = o.Account.Gate_Code__c;
+        p.Site_Description__c = o.Account.Site_Description__c;
+        p.HD_Pan_Tilt_Zoom_Camera__c = o.HD_Pan_Tilt_Zoom_Camera__c;
+        p.Weekend_Day_Time_Coverage__c = o.Weekend_Day_Time_Coverage__c;
+        p.Time_Lapse__c = o.Time_Lapse__c;
+        p.Protection_Plan__c = o.Protection_Plan__c;
+        p.Motion_Solar_Light__c = o.Motion_Solar_Light__c;
+        p.Customer_Office_Hours__c = o.Account.Customer_Office_Hours__c;
+        p.Primary_Contact__c = o.Account.Primary_Contact__c;
+        p.State_of_Incorporation__c = o.Account.State_of_Incorporation__c;
+        p.Federal_ID_No__c = o.Federal_ID_No__c;
+        
+        //Additional PIQ Fields Requirements CHAN-622
+        p.Project_Name__c = o.Project_Name__c;
+        p.What_is_being_monitored__c = o.What_is_being_monitored__c;
+        p.Property_Owner_Name__c = o.Property_Owner_Name__c;
+        p.Property_Owner_Company_Name__c = o.Property_Owner_Company_Name__c;
+        p.Property_Owner_Address__c = o.Property_Owner_Address__c;
+        p.Property_Owner_City__c = o.Property_Owner_City__c;
+        p.Property_Owner_State__c = o.Property_Owner_State__c;
+        p.Property_Owner_Postal_Code__c = o.Property_Owner_Postal_Code__c;
+        p.General_Contractor_Name__c = o.General_Contractor_Name__c;
+        p.General_Contractor_Company_Name__c = o.General_Contractor_Company_Name__c;
+        p.General_Contractor_Address__c = o.General_Contractor_Address__c;
+        p.General_Contractor_City__c = o.General_Contractor_City__c;
+        p.General_Contractor_State__c = o.General_Contractor_State__c;
+        p.General_Contractor_Postal_Code__c = o.General_Contractor_Postal_Code__c;
+        
+        List<AccountTeamMember> teamList = [ SELECT ID, UserID, TeamMemberRole
+                                            , User.Name, User.Phone
+                                            FROM AccountTeamMember
+                                            WHERE AccountID = :o.AccountID 
+                                            AND TeamMemberRole = 'Account Manager' ];
+        if( teamList.size() > 0 ) {
+            String managerName = teamList[ 0 ].User.Name;
+            if( managerName == null || managerName == '' ) {
+                managerName = 'us';
+            }
+            String managerPhone = teamList[ 0 ].User.Phone;
+            if( managerPhone == null || managerPhone == '' ) {
+                managerPhone = '866-616-1318';
+            }
+            accountManager = 'To make changes to your hours contact ' 
+                + teamList[ 0 ].User.Name + ' at ' + teamList[ 0 ].User.Phone
+                + ' .';
+        }
+        
+        // retrieve monitoring hours
+        List<Installation__c> installationList = [ 
+            SELECT ID, Guard_Tour_Times__c
+            , Additional_Monitoring_Hours__c, Monitoring_Hours__c 
+            FROM Installation__c 
+            WHERE Opportunity__c = :o.ID 
+            ORDER BY CreatedDate DESC ];
+        if( installationList.size() > 0 ) {
+            Installation__c i = installationList[ 0 ];
+            i.Monitoring_Hours__c = i.Monitoring_Hours__c != null ? i.Monitoring_Hours__c : '';
+            i.Additional_Monitoring_Hours__c = i.Additional_Monitoring_Hours__c != null ? i.Additional_Monitoring_Hours__c : '';
+            i.Guard_Tour_Times__c = i.Guard_Tour_Times__c != null ? i.Guard_Tour_Times__c : '';
+            monitoringHours = 'Your monitoring hours are as follows:'
+                + '<br /><br />Monitoring Hours: ' + i.Monitoring_Hours__c
+                + '<br />Additional Monitoring Hours: ' + i.Additional_Monitoring_Hours__c
+                + '<br />Guard Tour Times: ' + i.Guard_Tour_Times__c;
+        }
+    }
+    
+    public PageReference previousPage() {
+        // allow user to go back without the required fields
+        //if( verifyRequiredFields() ) {
+        //  return null;
+        //}
+        
+        if( view > 1 ) {
+            view --;
+        }
+        
+        return null;
+    }
+    
+    public PageReference nextPage() {
+        if( verifyRequiredFields() ) {
+            return null;
+        }
+        
+        view ++;
+        
+        return null;
+    }
+    
+    //This method will reRender the PageBlock for construction indstries and will show the required fields
+    public PageReference RenderSec()
+    {
+        if(SelectedVal.startsWith('Construction'))
+        {
+            showFields = true ;
+        }
+        else {
+            showFields = false;
+            
+        }
+         
+        return Null;
+    }
+    
+    public PageReference submit() {
+        system.debug( 'Form submitted, data validation' );
+        if( verifyRequiredFields() ) {
+            return null;
+        }
+        
+        Savepoint sp = Database.SetSavepoint();
+        
+        //    Contact emergencyContact1 = new Contact();
+        //    emergencyContact1.ID = o.Account.X1st_Emergency_Contact__c;
+        //    if( p.X1st_Emergency_Contact__c != null ) {
+        //      String[] nameList = splitName( p.X1st_Emergency_Contact__c );
+        //      emergencyContact1.FirstName = nameList[ 0 ];
+        //      emergencyContact1.LastName = nameList[ 1 ];
+        //      emergencyContact1.AccountId = o.AccountID;
+        //
+        //      try {
+        //        upsert emergencyContact1 Contact.ID;
+        //      } catch( Exception e ) {
+        //        ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+        //            , 'Problem found when saving the 1st Emergency Contact.' ) );
+        //        ApexPages.addMessages( e );
+        //        return null;
+        //      }
+        //    }
+        //
+        //    Contact emergencyContact2 = new Contact();
+        //    emergencyContact2.ID = o.Account.X2nd_Emergency_Contact__c;
+        //    if( p.X2nd_Emergency_Contact__c != null ) {
+        //      String[] nameList = splitName( p.X2nd_Emergency_Contact__c );
+        //      emergencyContact2.FirstName = nameList[ 0 ];
+        //      emergencyContact2.LastName = nameList[ 1 ];
+        //      emergencyContact2.AccountId = o.AccountID;
+        //
+        //      try {
+        //        upsert emergencyContact2 Contact.ID;
+        //      } catch( Exception e ) {
+        //        ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+        //            , 'Problem found when saving the 2nd Emergency Contact.' ) );
+        //        ApexPages.addMessages( e );
+        //        return null;
+        //      }
+        //    }
+        
+        Contact piqContact = new Contact();
+        piqContact.ID = o.PiQ_Contact__c;
+        if( p.Contact_Name__c != null ) {
+            String[] nameList = splitName( p.Contact_Name__c );
+            piqContact.FirstName = nameList[ 0 ];
+            piqContact.LastName = nameList[ 1 ];
+            piqContact.AccountId = o.AccountID;
+            system.debug( 'PIQ Contact = ' + piqContact );
+            
+            try {
+                upsert piqContact Contact.ID;
+            } catch( Exception e ) {
+                Database.rollback( sp );
+                ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+                                                            , 'Problem found when saving the PIQ Contact.'+e.getmessage() ) );
+                ApexPages.addMessages( e );
+                return null;
+            }
+        }
+        
+        Contact billingContact = new Contact();
+        billingContact.ID = o.Billing_Contact__c;
+        if( p.Billing_Contact_Name__c != null ) {
+            String[] nameList = splitName( p.Billing_Contact_Name__c );
+            billingContact.FirstName = nameList[ 0 ];
+            billingContact.LastName = nameList[ 1 ];
+            billingContact.Phone = p.Billing_Phone__c;
+            billingContact.Email = p.Billing_Contact_Email__c;
+            billingContact.AccountId = o.AccountID;
+            
+            system.debug( 'Billing Contact = ' + billingContact );
+            try {
+                upsert billingContact Contact.ID;
+            } catch( Exception e ) {
+                Database.rollback( sp );
+                ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+                                                            , 'Problem found when saving the Billing Contact.'+e.getmessage() ) );
+                ApexPages.addMessages( e );
+                return null;
+            }
+        }
+        
+        Account a = new Account();
+        a.ID = o.AccountID;
+        a.X1st_Emergency_Contact_txt__c = p.X1st_Emergency_Contact__c;
+        a.X2nd_Emergency_Contact_txt__c = p.X2nd_Emergency_Contact__c;
+        //a.Project_Completion_Date__c = p.Project_Completion_Date__c;
+        a.Name = p.Company_Name__c;
+        a.Site_Type__c = p.Site_Type__c;
+        a.Industry = p.Industry_Type__c;
+        a.Occupied__c = p.Occupied__c;
+        a.ShippingStreet = p.Shipping_Street__c;
+        a.ShippingCity = p.Shipping_City__c;
+        a.ShippingCountryCode = 'US';
+        a.ShippingStateCode = p.Shipping_State__c;
+        a.ShippingPostalCode = p.Shipping_PostalCode__c;
+        a.Time_Zone__c = p.Time_Zone__c;
+        a.Activity_Email__c = p.Activity_Email__c;
+        a.Notifiy_via_email_on_arm_or_disarm__c = p.Notifiy_via_email_on_arm_or_disarm__c;
+        a.Outage_Notification_Method__c = p.Outage_Notification_Method__c;
+        a.Activity_SMS__c = p.Activity_SMS__c;
+        a.User_name__c = p.Username__c;
+        a.Password__c = p.Password__c;
+        a.Maintenance_Instructions__c = p.Maintenance_Instructions__c;
+        a.Invoice_Delivery_Method__c = p.Invoice_Delivery_Method__c;
+        a.Tax_Exempt__c = p.Tax_Exempt__c;
+        a.BillingStreet = p.Billing_Street__c;
+        a.BillingCity = p.Billing_City__c;
+        a.BillingCountryCode = 'US';
+        a.BillingStateCode = p.Billing_State__c;
+        a.BillingPostalCode = p.Billing_Postal_Code__c;
+        a.Email__c = p.Billing_Contact_Email__c; 
+        a.Customer_Office_Hours__c = p.Customer_Office_Hours__c;
+        a.Primary_Contact__c = p.Primary_Contact__c;
+        a.Secondary_Security_SSS__c = p.Secondary_Security_SSS__c;
+        a.SSS_Contact__c = p.SSS_Contact__c;
+        a.Cross_Street_1__c = p.Cross_Street_1__c;
+        a.Cross_Street_2__c = p.Cross_Street_2__c;
+        a.Local_Police__c = p.Local_Police__c;
+        a.Police_Department_Name__c = p.Police_Department_Name__c;
+        a.Contact_Owner__c = p.Contact_Owner__c;
+        a.Safe_Word__c = p.Safe_Word__c;
+        a.Gate_Code__c = p.Gate_Code__c;
+        a.Site_Description__c = p.Site_Description__c;
+        a.State_of_Incorporation__c = p.State_of_Incorporation__c;
+        
+        system.debug( 'Acct = ' + a );
+        try {
+            update a;
+        } catch( Exception e ) {
+            Database.rollback( sp );
+            ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+                                                        , 'Problem found when saving account information.' ) );
+            ApexPages.addMessages( e );
+            return null;
+        }
+        
+        //PIQ Responses to stored in custom object for tracking the PIQ
+        p2 = new PIQ_Response__c();
+        p2.Contract_Expiration_Date__c = p.Contract_Expiration_Date__c;
+        p2.Opportunity_Name__c = p.Opportunity_Name__c;
+        p2.Contact_Name__c = p.Contact_Name__c;
+        p2.Company_Name__c = p.Company_Name__c;
+        p2.Sales_Rep_Name__c = p.Sales_Rep_Name__c;
+        p2.Site_Type__c = p.Site_Type__c;
+        p2.Occupied__c = p.Occupied__c;
+        p2.Shipping_Street__c = p.Shipping_Street__c;
+        p2.Shipping_City__c = p.Shipping_City__c;
+        p2.Shipping_State__c = p.Shipping_State__c;
+        p2.Shipping_PostalCode__c = p.Shipping_PostalCode__c;
+        p2.Time_Zone__c = p.Time_Zone__c;
+        p2.Activity_Email__c = p.Activity_Email__c;
+        p2.Notifiy_via_email_on_arm_or_disarm__c = p.Notifiy_via_email_on_arm_or_disarm__c;
+        p2.Outage_Notification_Method__c = p.Outage_Notification_Method__c;
+        p2.Username__c = p.Username__c;
+        p2.Password__c = p.Password__c;
+        p2.Invoice_Delivery_Method__c = p.Invoice_Delivery_Method__c;
+        p2.Billing_Contact_Name__c = p.Billing_Contact_Name__c;
+        p2.Billing_Phone__c = p.Billing_Phone__c;
+        p2.Billing_Contact_Email__c = p.Billing_Contact_Email__c;
+        p.Purchase_Order_Number__c = p.Purchase_Order_Number__c; 
+        p2.Tax_Exempt__c = p.Tax_Exempt__c;
+        p2.Billing_Street__c = p.Billing_Street__c;
+        p2.Billing_City__c = p.Billing_City__c;
+        p2.Billing_State__c = p.Billing_State__c;
+        p2.Billing_Postal_Code__c = p.Billing_Postal_Code__c;
+        p2.Secondary_Security_SSS__c = p.Secondary_Security_SSS__c;
+        p2.Cross_Street_1__c = p.Cross_Street_1__c;
+        p2.Cross_Street_2__c = p.Cross_Street_2__c;
+        p2.X1st_Emergency_Contact__c = p.X1st_Emergency_Contact__c;
+        p2.X2nd_Emergency_Contact__c = p.X2nd_Emergency_Contact__c;
+        p2.Local_Police__c = p.Local_Police__c;
+        p2.Police_Department_Name__c = p.Police_Department_Name__c;
+        p2.Contact_Owner__c = p.Contact_Owner__c;
+        p2.Safe_Word__c = p.Safe_Word__c;
+        p2.Gate_Code__c = p.Gate_Code__c;
+        p2.Site_Description__c = p.Site_Description__c;
+        p2.Customer_Office_Hours__c = p.Customer_Office_Hours__c;
+        p2.Primary_Contact__c = p.Primary_Contact__c;
+        p2.Federal_ID_No__c = p.Federal_ID_No__c;
+        p2.stageName__c = '50-PIQ Complete';
+        p2.Opportunity__c = o.Id;
+        try {
+            upsert  p2;
+         } catch( Exception e ) {
+            Database.rollback( sp );
+            ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+                                                        , 'Problem found when saving PIQ Response information.'+e.getmessage() ) );
+            ApexPages.addMessages( e );
+            return null;
+        }
+        
+        o.Name = p.Opportunity_Name__c;
+        o.Contract_Expiration_Date__c = p.Contract_Expiration_Date__c;
+        o.PiQ_Contact__c = piqContact.ID;
+        o.Billing_Contact__c = billingContact.ID;
+        o.Billing_Contact_Phone__c = p.Billing_Phone__c;
+        o.Billing_Contact_Email__c = p.Billing_Contact_Email__c;
+        o.Purchase_Order_Number__c = p.Purchase_Order_Number__c;
+        o.StageName = '50-PIQ Complete';
+        o.PIQ_Received__c = TRUE;
+        o.Federal_ID_No__c = p.Federal_ID_No__c;
+        
+        //CHAN-622, Additional fields for construction indstries. these fields will updates on Opportunity.
+        o.Project_Name__c = p.Project_Name__c;
+        o.Property_Owner_Name__c = p.Property_Owner_Name__c;
+        o.What_is_being_monitored__c = p.What_is_being_monitored__c;
+        o.Property_Owner_Company_Name__c = p.Property_Owner_Company_Name__c;
+        o.Property_Owner_Address__c = p.Property_Owner_Address__c;
+        o.Property_Owner_City__c = p.Property_Owner_City__c;
+        o.Property_Owner_State__c = p.Property_Owner_State__c;
+        o.Property_Owner_Postal_Code__c = p.Property_Owner_Postal_Code__c;
+        o.General_Contractor_Name__c = p.General_Contractor_Name__c;
+        o.General_Contractor_Company_Name__c = p.General_Contractor_Company_Name__c;
+        o.General_Contractor_Address__c = p.General_Contractor_Address__c;
+        o.General_Contractor_City__c = p.General_Contractor_City__c;
+        o.General_Contractor_State__c = p.General_Contractor_State__c;
+        o.General_Contractor_Postal_Code__c = p.General_Contractor_Postal_Code__c;
+        
+        
+        //o.Customer_Office_Hours__c = p.Customer_Office_Hours__c;
+        system.debug( 'Oppty = ' + o );
+        //o.Time_Lapse__c = p.Time_Lapse__c;
+        //o.HD_Pan_Tilt_Zoom_Camera__c = p.HD_Pan_Tilt_Zoom_Camera__c;
+        //o.Weekend_Day_Time_Coverage__c = p.Weekend_Day_Time_Coverage__c;
+        //o.Protection_Plan__c = p.Protection_Plan__c;
+        //o.Motion_Solar_Light__c = p.Motion_Solar_Light__c;
+        
+        try {
+            update o;
+             
+        } catch( Exception e ) {
+            Database.rollback( sp );
+            ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+                                                        , 'Problem found when saving PIQ information.'+e.getmessage() ) );
+            ApexPages.addMessages( e );
+            return null;
+        }
+          
+        view ++;
+        
+        return null;
+    }
+    
+    public String[] splitName( String aName ) {
+        if( aName == null ) {
+            String[] nameList = new String[] { '', '' };
+                return nameList;
+        }
+        String[] nameList = aName.split( ' ' );
+        if( nameList.size() < 2 ) {
+            // if name is a single name, make first name blank
+            nameList.add( nameList[ 0 ] );
+            nameList[ 0 ] = '';
+        }
+        return nameList;
+    }
+    
+    public Boolean verifyRequiredFields() {
+        Map<Integer, Map<String, Object>> requiredMapByIndex = new Map<Integer, Map<String, Object>> {
+            1 => new Map<String, Object> { 'Your Name' => p.Contact_Name__c }
+            , 2 => new Map<String, Object> { 
+                'Company Name' => p.Company_Name__c
+                    , 'Site Name' => p.Opportunity_Name__c
+                    , 'Site Type' => p.Site_Type__c
+                    , 'Industry Type' => p.industry_Type__c
+                    , 'Occupied/Residential Site' => String.valueOf( p.Occupied__c )
+                    , 'Site Address' => p.Shipping_Street__c
+                    , 'Site City' => p.Shipping_City__c
+                    , 'Site State' => p.Shipping_State__c
+                    , 'Site Zip Code' => p.Shipping_PostalCode__c
+                    , 'Site Time Zone' => p.Time_Zone__c }
+            
+            , 3 => new Map<String, Object> { 
+                'What are your business hours for service related visits?' => p.Customer_Office_Hours__c
+                    , 'Primary Contact' => p.Primary_Contact__c  
+                    ,'E-Mail Address' => p.Activity_Email__c
+                    , 'What is being monitored?' => p.What_is_being_monitored__c
+                    , 'Notify me via email' => String.valueOf( p.Notifiy_via_email_on_arm_or_disarm__c )
+                    , 'Outage Notification Method' => p.Outage_Notification_Method__c
+                    , 'Username' => p.Username__c }
+            , 4 => new Map<String, Object> { 
+                'Billing Contact' => p.Billing_Contact_Name__c
+                    , 'Billing Phone' => p.Billing_Phone__c
+                    , 'Billing email' => p.Billing_Contact_Email__c
+                    , 'Purchase Order Number' => p.Purchase_Order_Number__c
+                    , 'Invoice Delivery Method' => p.Invoice_Delivery_Method__c
+                    , 'Tax Exempt' => p.Tax_Exempt__c
+                    , 'Billing Address' => p.Billing_Street__c
+                    , 'Billing City' => p.Billing_City__c
+                    , 'Billing State' => p.Billing_State__c
+                    , 'Billing Zip Code' => p.Billing_Postal_Code__c }
+            , 5 => new Map<String, Object> { 
+                'Secondary Security Services' => p.Secondary_Security_SSS__c
+                    , 'Cross Street 1' => p.Cross_Street_1__c
+                    , 'Cross Street 2' => p.Cross_Street_2__c
+                    , '1st Emergency Contact' => p.X1st_Emergency_Contact__c
+                    , '2nd Emergency Contact' => p.X2nd_Emergency_Contact__c
+                    , 'Local Police Number' => p.Local_Police__c
+                    , 'Local Police Dept. Name' => p.Police_Department_Name__c
+                    , 'Contact me before authorities' => String.valueOf( p.Contact_Owner__c )
+                    , 'Safe Word' => p.Safe_Word__c
+                    , 'Brief Description' => p.Site_Description__c }
+            // , 'Contract Expiration Date' => String.valueOf( p.Contract_Expiration_Date__c )
+            //, 'Project Completion Date' => String.valueOf( p.Project_Completion_Date__c )
+            //, 6 => new Map<String, Object> { 
+            //  'Time-Lapse video' => p.Time_Lapse__c
+            //  , 'HD Pan Tilt Zoom Camera' => p.HD_Pan_Tilt_Zoom_Camera__c
+            //  , 'Weekend Day Time Coverage' => p.Weekend_Day_Time_Coverage__c
+            //  , 'Guaranteed Protection Plan' => p.Protection_Plan__c
+            //  , 'Motion activated solar lights' => p.Motion_Solar_Light__c }
+        };
+            
+            ApexPages.getMessages().clear();
+        
+        Map<String, Object> fieldValueMap = requiredMapByIndex.get( view );
+        Boolean hasErrors = false;
+        if(o.PIQ_Received__c==true&&view==1){
+            ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+                                                        , 'A PIQ has already been received for this account. Please contact your Account Manager to request any changes.' ) );
+            hasErrors = true;
+            return hasErrors;
+            
+        }
+        
+        for( String theKey : fieldValueMap.keySet() ) {
+            String theValue = (String) fieldValueMap.get( theKey );
+            if( theValue == null || theValue == '' ) {
+                ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+                                                            , theKey + ' is required.' ) );
+                hasErrors = true;
+            }
+        }
+        
+        if( fieldValueMap.containsKey( 'Safe Word' ) 
+           && p.Safe_Word__c != null && p.Safe_Word__c != '' ) {
+               // validation - a word and 2 digits, no spaces or caps
+               Pattern patt = Pattern.compile( '(?=(.*\\d){2,})(?=(.*[a-z]){3,}).*' );
+               Matcher m = patt.matcher( p.Safe_Word__c );
+               if( ! m.matches() || p.Safe_Word__c.contains( ' ' ) ) {
+                   ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+                                                               , 'Please enter a safe word with 2 digits, no spaces or caps.' ) );
+                   hasErrors = true;
+               }
+           }
+        
+        if( fieldValueMap.containsKey( 'E-Mail Address' ) 
+           && p.Activity_Email__c != null && p.Activity_Email__c != '' ) {
+               // get each email address in the field
+               String activityEmail = p.Activity_Email__c.replace( ';', ',' ).replace( ' ', ',' )
+                   .replace( '/', ',' ).replace( ',,', ',' );
+               String[] emailList = activityEmail.split( ',' );
+               for( String anEmail : emailList ) {
+                   // validate email addresses in p.Activity_Email__c step 3
+                   
+                   // NOTE: this would test all emails at once:  (^(\,?[a-zA-Z0-9\_\-\.]+@[a-zA-Z0-9\_\-\.]+\.[a-zA-Z0-9\-\_]+)+$)
+                   
+                   Pattern patt = Pattern.compile( '(^[a-zA-Z0-9]+([\\_\\-\\.]*[a-zA-Z0-9]+[\\_\\-]?)*@[a-zA-Z0-9]+([\\_\\-\\.]?[a-zA-Z0-9]+)*\\.+([\\-\\_]?[a-zA-Z0-9])+(\\.?[a-zA-Z0-9]+)*$)' );
+                   Matcher m = patt.matcher( anEmail );
+                   if( ! m.matches() ) {
+                       ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+                                                                   , 'Please enter valid email addresses.' ) );
+                       hasErrors = true;
+                       break;
+                   }
+               }
+               if( hasErrors == false ) {
+                   p.Activity_Email__c = String.join( emailList, ',' );
+               }
+           }
+        
+        if( view == 3 && p.Activity_SMS__c != null && p.Activity_SMS__c != '' ) {
+            // validate cell phone numbers separated by commas
+            Pattern patt = Pattern.compile( '(^(\\,?[\\s0-9\\(\\)\\-\\.])+$)' );
+            Matcher m = patt.matcher( p.Activity_SMS__c );
+            if( ! m.matches() ) {
+                ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+                                                            , 'Please enter valid SMS numbers.' ) );
+                hasErrors = true;
+            }
+        }
+        if( view == 4 && p.Billing_Contact_Email__c != null && p.Billing_Contact_Email__c != '' ) {
+            // get each email address in the field
+            String Billingemail = p.Billing_Contact_Email__c;
+            String emailRegex = '([a-zA-Z0-9_\\-\\.]+)@((\\[a-z]{1,3}\\.[a-z]{1,3}\\.[a-z]{1,3}\\.)|(([a-zA-Z0-9\\-]+\\.)+))([a-zA-Z]{1,9}|[0-9]{1,8})';
+            Pattern MyPattern = Pattern.compile(emailRegex);
+            Matcher MyMatcher = MyPattern.matcher(Billingemail);
+            if (!MyMatcher.matches())  {
+                ApexPages.addMessage( new ApexPages.Message( ApexPages.Severity.ERROR
+                                                            , 'Only one valid Billing email is allowed.' ) );
+                hasErrors = true;
+                
+            }
+            
+            if( hasErrors == false ) {
+                p.Billing_Contact_Email__c =  Billingemail;
+            }
+            
+        }
+        
+        return hasErrors;
+    }
+    
+}

@@ -1,0 +1,91 @@
+@isTest
+public class caseControllerTest
+{
+    private static testMethod void caseController()
+    {
+        Account acc = new Account(Name='test');
+        insert acc;
+        
+        Contact con = new COntact(Firstname='test',Lastname='test',Email='test@gmail.com',Accountid=acc.id);
+        insert con;
+        
+        Unit__c u = new Unit__c(Name='test');
+        insert u;
+        
+        //case c = [Select id from case limit 1];
+        Case c = new Case(Contactid=con.id,accountid=acc.id,type='Account Change',status='01-New',subject='test',Description='test');
+        insert c;
+        
+        Installation__c ins = new Installation__c(Site__c=acc.id,Status__c='2-Installed',Unit__c=u.id,
+                                Installed_Date__c=Date.today() ,
+                                Air_Card_Hex__c='Test' ,
+                                Facility__c ='Pro-Vigil',
+                                Carrier__c ='AT&T',
+                                Static_IP__c='0.0.0.0' ,
+                                Power_Meter__c='Yes',
+                                IP_Power_Box__c= 'No',
+                                Power_Source__c= '220V - Main',
+                                Monitoring_Service__c ='Client',
+                                Time_Zone__c= 'CT',
+                                I_Vigil_Test__c='Yes' ,
+                                Cameras_to_Monitor__c= 'All',
+                                I_Vigil_Site_Description__c='Yes' ,
+                                i_Vigil_Boundaries__c ='Yes',
+                                Residential_Area__c ='Yes',
+                                Sales_Rep_Present__c ='Yes',
+                                Install_Duration__c ='Under an hour',
+                                Pro_Vigil_Signage__c='Yes' ,
+                                Pigtail_Fixture__c='Yes' ,
+                                Electrical_Cable_Length__c='25' ,
+                                Average_upload_speed_Mbps__c =2,
+                                Install_Case__c=c.id );
+        insert ins;
+        
+        case cs = new Case();
+        Apexpages.standardController SC = new Apexpages.StandardController(cs);
+        caseController cns = new caseController(sc);
+        cns.cs.Unit__c = u.id;
+        cns.autoPopup();
+        try{
+        cns.dosave();
+        }catch(Exception e){}
+    }
+    public static testMethod void redirectCntl()
+    {
+        
+        string recid = [Select id from RecordType where sobjecttype = 'Case' limit 1].id;
+        Apexpages.currentpage().getparameters().put('RecordType',recid);
+        
+        
+        
+        Case cs = new Case();
+        Apexpages.standardController SC = new Apexpages.standardController(cs);
+        
+        redirectCntl cn = new redirectCntl(sc);
+        Apexpages.currentpage().getparameters().put('CF00No000000CbwFp_lkid','123456');
+        Apexpages.currentpage().getparameters().put('CF00No000000CbwFp','123456');
+        cn.init();
+        
+        redirectCntl cn1 = new redirectCntl(sc);
+        string recid1 = [Select id from RecordType where sobjecttype = 'Case' and Name='Quality Review' limit 1].id;
+        Apexpages.currentpage().getparameters().put('RecordType',recid1);
+        Apexpages.currentpage().getparameters().put('CF00No000000CbwFp_lkid','123456');
+        Apexpages.currentpage().getparameters().put('CF00No000000CbwFp','123456');
+        cn1.init();
+         
+        string recid2 = [Select id from RecordType where sobjecttype = 'Case' and Name='Accounting Request' limit 1].id;
+        Apexpages.currentpage().getparameters().put('RecordType',recid2);
+        Apexpages.currentpage().getparameters().put('CF00No000000CbwFp_lkid','123456');
+        Apexpages.currentpage().getparameters().put('CF00No000000CbwFp','123456');
+        cn1.init();
+        
+        string recid3 = [Select id from RecordType where sobjecttype = 'Case' and Name='General Request' limit 1].id;
+        Apexpages.currentpage().getparameters().put('RecordType',recid3);
+        Apexpages.currentpage().getparameters().put('CF00No000000CbwFp_lkid','123456');
+        Apexpages.currentpage().getparameters().put('CF00No000000CbwFp','123456');
+        cn1.init();
+            
+        
+    }
+
+}

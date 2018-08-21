@@ -1,0 +1,71 @@
+public class PIQController {
+    
+    public   PIQ_Response__c  p { get; set; } 
+    
+    public PIQController() {
+        Id id = ApexPages.currentPage().getParameters().get('id');
+        //Fetch all the records related to the PIQ Responses from Opportunity and Account
+        p = [SELECT ID, Opportunity_Name__c, Contact_Name__c, Company_Name__c,
+             Site_Type__c, Occupied__c, Shipping_Street__c, Shipping_State__c,
+             Shipping_City__c, Shipping_PostalCode__c, Time_Zone__c, Customer_Office_Hours__c,
+             Primary_Contact__c, Activity_Email__c, Password__c,
+             Notifiy_via_email_on_arm_or_disarm__c, Outage_Notification_Method__c,
+             Username__c, Billing_Contact_Name__c, Billing_Phone__c, Billing_Contact_Email__c,
+             Purchase_Order_Number__c, Invoice_Delivery_Method__c, Tax_Exempt__c, Billing_Street__c,
+             Billing_City__c, Billing_State__c, Billing_Postal_Code__c, Secondary_Security_SSS__c,
+             Cross_Street_1__c, Cross_Street_2__c, X1st_Emergency_Contact__c, X2nd_Emergency_Contact__c,
+             Local_Police__c, Police_Department_Name__c, Contact_Owner__c, Safe_Word__c,Site_Description__c
+             FROM PIQ_Response__c where id =:id];
+    }
+    public Static void sendPDf(String Id, List<String> Email)
+    { 
+        //Fetch PIQ_Response__c id, Opportunity__r.id 
+        List<PIQ_Response__c> piq = [select id, stageName__c, Opportunity__r.id  from PIQ_Response__c where id=:id];
+        
+        Set<Id> opId = new Set<Id>();
+        for(PIQ_Response__c piq2 : piq) {
+            opId.add(piq2.Opportunity__r.id);
+        }
+        
+        Opportunity op = [select id, name from Opportunity where Id=:opId];
+        Messaging.SingleEmailMessage emailTobeSent = new Messaging.SingleEmailMessage();
+        //Attachment PDf with the page you have rendered as PDF(VisualForce Page)
+        PageReference PDf = Page.PIQReport;
+        PDf.getParameters().put('Id',Id);
+        PDf.setRedirect(true);
+        
+        Blob b ;
+        if(!Test.isRunningTest()){
+            b = PDf.getContent();
+        }else{
+            b = Blob.valueOf('Unit.Test'); 
+        }
+        
+        //Create the Record Attachments
+        /*Attachment attach = new Attachment();
+        Blob b ;
+        if(!Test.isRunningTest()){
+            b = PDf.getContent();
+        }else{
+            b = Blob.valueOf('Unit.Test'); 
+        }
+        attach.Body = b;
+        attach.Name = op.name+' PIQ Response';
+        attach.IsPrivate = false;
+        attach.ParentId = op.Id;
+        insert attach;*/
+        
+        //Create the Email Attachments
+        Messaging.EmailFileAttachment efa = new Messaging.EmailFileAttachment();
+        efa.setFileName(op.name+' PIQ Response.PDf');
+        efa.setBody(b);
+        //String[] toAddresses = new String[] {Email};
+        emailTobeSent.setToAddresses(Email);
+        emailTobeSent.setSubject(op.name+' PIQ Response');
+        emailTobeSent.setHtmlBody('Confirmation of PIQResponse.');
+        emailTobeSent.setFileAttachments(new Messaging.EmailFileAttachment[] {efa}); 
+        
+        //Sends the email
+        Messaging.SendEmailResult [] r1 = Messaging.sendEmail(new Messaging.SingleEmailMessage[] {emailTobeSent});
+    }
+}

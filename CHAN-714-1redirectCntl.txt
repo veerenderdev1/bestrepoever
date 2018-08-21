@@ -1,0 +1,104 @@
+public class redirectCntl
+{
+    
+    public redirectCntl(ApexPages.StandardController controller) {
+        
+    }
+    
+    public pageReference init()
+    {
+        string installationId;
+        string installationName;
+        
+        string unitId;
+        string unitName;
+        
+        string accountid;
+        string accountname;
+        
+        string  urls=string.valueOf(URL.getCurrentRequestUrl());
+        if(urls.contains('_lkid') || test.isRunningTest())
+        {
+            if(urls.contains('CF00No000000CbwFp_lkid') || test.isRunningTest())//Unit id
+            {
+                unitId = ApexPages.currentPage().getParameters().get('CF00No000000CbwFp_lkid');
+                unitName = ApexPages.currentPage().getParameters().get('CF00No000000CbwFp');
+            }
+            
+            if(urls.contains('CF00No000000CcAO5_lkid') || test.isRunningTest())//Installation id
+            {
+                installationId = ApexPages.currentPage().getParameters().get('CF00No000000CcAO5_lkid');
+                installationName = ApexPages.currentPage().getParameters().get('CF00No000000CcAO5');
+            }
+            
+        }
+        if(urls.contains('def_account_id'))
+        {
+            accountid =  ApexPages.currentPage().getParameters().get('def_account_id');
+        }
+        String selectedRecordType = ApexPages.currentPage().getParameters().get('RecordType');
+        string rectype = [Select Name from Recordtype where id=:selectedRecordType].name;
+        system.debug('****'+selectedRecordType+'***'+rectype);
+        PageReference p;
+        if(rectype  == 'Quality Review')
+        {
+            p = new pageReference('/apex/newCase?retURL=%2F500%2Fo&RecordType='+selectedRecordType);
+            if(unitId != null && unitId != '')
+                p.getParameters().put('CF00No000000CbwFp_lkid',unitId);
+            
+            if(unitName != null && unitName != '')
+                p.getParameters().put('CF00No000000CbwFp',unitName);
+            
+            if(installationId != null && installationId != '')
+                p.getParameters().put('CF00No000000CcAO5_lkid',installationId );
+            
+            if(installationName != null && installationName != '')
+                p.getParameters().put('CF00No000000CcAO5',installationName );
+            
+            if(accountid != null && accountid != '')
+                p.getParameters().put('def_account_id',accountid);
+            return p;
+        }
+        else if(rectype  == 'Accounting Request')
+        {
+            p = new pageReference('/apex/NewAccountingCase?retURL=%2F500%2Fo&RecordType='+selectedRecordType);
+            if(unitId != null && unitId != '')
+                p.getParameters().put('CF00No000000CbwFp_lkid',unitId);
+            
+            if(unitName != null && unitName != '')
+                p.getParameters().put('CF00No000000CbwFp',unitName);
+            
+            if(installationId != null && installationId != '')
+                p.getParameters().put('CF00No000000CcAO5_lkid',installationId );
+            
+            if(installationName != null && installationName != '')
+                p.getParameters().put('CF00No000000CcAO5',installationName );
+            
+            if(accountid != null && accountid != '')
+                p.getParameters().put('def_account_id',accountid);
+            return p;
+        }  
+        else
+        {
+            p = new PageReference('/500/e?retURL=%2F500%2Fo&RecordType='+selectedRecordType+'&ent=Case');
+            p.getParameters().put('nooverride','1');
+            if(unitId != null && unitId != '')
+                p.getParameters().put('CF00No000000CbwFp_lkid',unitId);
+            
+            if(unitName != null && unitName != '')
+                p.getParameters().put('CF00No000000CbwFp',unitName);
+            
+            if(installationId != null && installationId != '')
+                p.getParameters().put('CF00No000000CcAO5_lkid',installationId );
+            
+            if(installationName != null && installationName != '')
+                p.getParameters().put('CF00No000000CcAO5',installationName );
+            
+            if(accountid != null && accountid != '')
+                p.getParameters().put('def_account_id',accountid);           
+            return p;
+        }
+        return null;
+    }
+    
+}

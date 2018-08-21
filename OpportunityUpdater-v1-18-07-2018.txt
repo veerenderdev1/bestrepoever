@@ -1,0 +1,80 @@
+public class OpportunityUpdater {
+    public static void UpdateOpp(List<Opportunity> newList){
+     System.debug('***********************************************');
+        Set<Id> oppId = new Set<Id>();
+        for(Opportunity op: newList){
+            oppId.add(op.id);
+            system.debug('Opportunity id:'+oppId);
+        } 
+          
+        List<Opportunity> oppList = [SELECT Id, Name, Carefree_Maintenance_and_Support_Opt_in__c, Monthly_Holiday_Protection_Plan_Opt_in__c, (SELECT Id, Product2.name
+                                                       FROM OpportunityLineItems) 
+                                     FROM Opportunity WHERE Id=:oppId]; 
+        
+        List<Opportunity> UpdateOpp = new List<Opportunity>();
+        
+        for(Opportunity opp: oppList){
+            for(OpportunityLineItem oli2: opp.OpportunityLineItems){
+                System.debug('OppLineItems:::'+oli2.Product2.Name);
+                if(oli2.Product2.Name.contains('Carefree Maintenance') && opp.Carefree_Maintenance_and_Support_Opt_in__c == False){
+                    opp.Carefree_Maintenance_and_Support_Opt_in__c = True;
+                    UpdateOpp.add(opp);
+                }
+                 
+                if(oli2.Product2.Name.contains('Holiday Protection Plan') && opp.Monthly_Holiday_Protection_Plan_Opt_in__c == False){
+                    opp.Monthly_Holiday_Protection_Plan_Opt_in__c = True;
+                    UpdateOpp.add(opp);
+                }
+              }
+        }
+        Map<id,Opportunity> opmap = new Map<id,Opportunity>();
+        opmap.putAll(UpdateOpp);
+        
+        if(opmap.size() > 0){
+            Update opmap.values();
+            system.debug(opmap.size()+'Opportunity Updated sucessfully:'+opmap.values());
+        }
+        
+    }
+    
+    public static void removeProductName(List<OpportunityLineItem> newList){
+        
+        Set<Id> allOppIds = new Set<Id>();
+        //Get the OpportunityID related to the OpportunityLineItems
+        system.debug('****'+newList);
+        for(OpportunityLineItem oli : newList) {
+            allOppIds.add(oli.OpportunityId);
+        }         
+         
+        //Retrieve all the OpportunityLineItems records related to the Opportunity
+        List<Opportunity> oppList = [SELECT Id, Name, Carefree_Maintenance_and_Support_Opt_in__c, Monthly_Holiday_Protection_Plan_Opt_in__c, 
+                                     (SELECT Id, Product2.name, Product2.Storage_Days__c
+                                                       FROM OpportunityLineItems)
+                                     FROM Opportunity WHERE Id=:allOppIds]; 
+        
+        List<Opportunity> UpdateOpp2 = new List<Opportunity>();
+        //Loop through all records to find out the product name contains 'Cloud Storage'
+        for(Opportunity o: oppList){
+            for(OpportunityLineItem li: o.OpportunityLineItems){
+                
+                if(!li.Product2.Name.contains('Carefree Maintenance') && o.Carefree_Maintenance_and_Support_Opt_in__c == True){
+                    o.Carefree_Maintenance_and_Support_Opt_in__c = False;
+                    UpdateOpp2.add(o);   
+                }
+                if(!li.Product2.Name.contains('Holiday Protection Plan') && o.Monthly_Holiday_Protection_Plan_Opt_in__c == True){
+                    o.Monthly_Holiday_Protection_Plan_Opt_in__c = False;
+                    UpdateOpp2.add(o);
+                }
+                break;
+            }
+        }
+        
+        Map<id,Opportunity> opmap2 = new Map<id,Opportunity>();
+        opmap2.putAll(UpdateOpp2);
+        
+        if(opmap2.size() > 0){
+            Update opmap2.values();
+            system.debug(opmap2.size()+'Opportunity Updated sucessfully:'+opmap2.values());
+        }
+    }
+}

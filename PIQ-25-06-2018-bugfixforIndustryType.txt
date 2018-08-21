@@ -1,0 +1,665 @@
+<apex:page showHeader="false" sidebar="false" docType="html-5.0"
+    title="Pre-Installation Questionnaire" controller="VFC_PIQ" >
+
+<!-- font is defined in this CSS static resource -->
+<apex:stylesheet value="{!URLFOR( $Resource.proximaNovaCss, '' )}" />
+
+<style type="text/css">
+    .showStatus {
+        position: absolute;
+        overflow: hidden;
+        top: 0px;
+        padding: 0;
+        margin: 0;
+        width: 90%;
+        height: 100%;
+        background: rgba( 255, 255, 255, 0.8 ); /* dimmed */
+        z-index: 1001;
+        visibility: visible;
+        display: block;
+    }
+    .hideStatus {
+        visibility: hidden;
+        display: none;
+    }
+    .animatedStatus {
+        display: block;
+        position: absolute;
+        top: 100px;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin-left: auto;
+        margin-right: auto;
+        z-index: 1002;
+    }
+    .instructions {
+        margin-left: 40px;
+        margin-right: 40px;
+        color: rgb(0, 42, 58)!important;
+        font-family: "Proxima Nova";
+    }
+    .fieldLabel {
+        font-weight: bold;
+        
+    }
+     .LabelSize {
+        font-weight: normal;
+        font-size: 16px!important;
+    }
+    .grayDescription {
+        margin: 0;
+        padding: 0;
+        font-family: "Proxima Nova";
+        font-size: 15px!important;
+        color: darkgray;
+    }
+    .blueButton {
+        color: white!important;
+        background: #36a0fe!important;
+    }
+    .required:after {
+        color: red;
+        content: " *";
+    }
+    .pvButton {
+        padding: 25px!important;
+        color: white!important;
+        background: rgb(0, 42, 58)!important;
+        font-size: 23px!important;
+        text-transform: uppercase;
+        width: 255px;
+        height: 70px;
+    }
+    .pvButton:hover {
+        color: red!important;
+        background: white!important;
+        border: red 3px solid!important;
+    }
+    .pbBody {
+        color: rgb(0, 42, 58)!important;
+        font-family: "Proxima Nova";
+        font-size: 23px!important;
+    }
+    H2.mainTitle {
+        color: rgb(0, 42, 58)!important;
+        font-family: "Proxima Nova";
+        font-size: 23px!important;
+    }
+    TD.pbTitle {
+        width: 100%!important;
+    }
+    H2.pageDescription {
+        color: rgb(0, 42, 58)!important;
+        font-family: "Proxima Nova";
+        font-size: 49px!important;
+    }
+    INPUT, SELECT {
+        font-size: 23px!important;
+    }
+</style>
+
+<apex:form id="theForm">
+
+<apex:image url="{!$Resource.ProVigilLogo}" />
+
+<apex:sectionHeader subtitle="Pre-Installation Questionnaire" title="" />
+
+<apex:pageMessages id="errorMessage" escape="false" />
+
+<apex:actionStatus id="ajaxStatus" layout="block"
+        startStyleClass="showStatus" stopStyleClass="hideStatus" >
+    <apex:facet name="start">
+        <apex:image value="/img/loading32.gif" styleClass="animatedStatus" />
+    </apex:facet>
+</apex:actionStatus>
+
+<apex:outputPanel id="instructions" layout="block" 
+            styleClass="instructions" rendered="{!view=1}" >
+    Please take a few minutes to complete and submit this form. All of the information is automatically imported into a database and a new account is created, so make sure all of the information is as complete as possible. This should take no more than 5 minutes and will fulfill all of the requirements to monitor and manage the account.<br />
+
+    <apex:pageBlock id="pageBlock1" >
+        <apex:outputLabel for="salesRepName" value="Sales Rep Name" styleClass="fieldLabel" />
+        <br />
+        <apex:outputText id="salesRepName" value="{!p.Sales_Rep_Name__c}" />
+        <!--
+        <apex:selectList id="salesRepName" value="{!o.OwnerID}" size="1">
+            <apex:selectOptions value="{!userList}" />
+        </apex:selectList>
+        -->
+        <p />
+
+        <apex:outputLabel for="contactName" value="Your Name" styleClass="fieldLabel required" />
+        <p class="grayDescription">By entering your name, you are confirming that you have authority to make operational/purchasing decisions and represent your company.</p>
+        <apex:inputText id="contactName" value="{!p.Contact_Name__c}" />
+        <p />
+
+<!--
+        <apex:outputLabel for="leadSource" value="How did you hear about us?" styleClass="fieldLabel" />
+        <p class="grayDescription">Help us reward our marketers!</p>
+        <apex:selectList id="leadSource" value="{!o.LeadSource}" size="1">
+            <apex:selectOptions value="{!leadSourceList}" />
+        </apex:selectList>
+        <p />
+-->
+        <p />
+        <apex:commandButton styleClass="pvButton" value="Continue >>" action="{!nextPage}"
+                status="ajaxStatus" reRender="theForm,errorMessage" />
+    </apex:pageBlock>
+
+</apex:outputPanel>
+
+<!-- STEP 2 -->
+
+<apex:outputPanel id="step2" layout="block" 
+            styleClass="instructions" rendered="{!view=2}" >
+
+    <apex:pageBlock id="pageBlock2" title="Tell us a little about your site" >
+        <apex:outputLabel for="companyName" value="Company Name" styleClass="fieldLabel required" />
+        <br />
+        <apex:inputText id="companyName" value="{!p.Company_Name__c}" />
+        <p />
+
+        <apex:outputLabel for="siteName" value="Site Name" styleClass="fieldLabel required" />
+        <p class="grayDescription">Ex. Building 21 (You'll enter an address later.)</p>
+        <apex:inputText id="siteName" value="{!p.Opportunity_Name__c}" />
+        <p />
+            
+        <apex:outputLabel for="siteType" value="Site Type" styleClass="fieldLabel required" />
+        <p class="grayDescription">Knowing what type of site you have will help us monitor more effectively.</p>
+        <apex:selectList id="siteType" value="{!p.Site_Type__c}" size="1">
+            <apex:selectOptions value="{!siteTypeList}" />
+        </apex:selectList>
+        <p />
+        
+        <!--CHAN-622, Additional Fields for construction indstries -->
+       <apex:actionRegion >
+            <apex:actionFunction name="RenderSection" action="{!RenderSec}"/>
+            
+            <apex:outputLabel for="IndustryType" value="Industry Type" styleClass="fieldLabel required"/>
+            <p class="grayDescription">Knowing what Industry type you have will help us monitor more effectively.</p>
+            <apex:selectList id="IndustryType" value="{!p.Industry_Type__c}" size="1" multiselect="false"  onChange="RenderSection();" >
+                <apex:selectOptions value="{!IndustryTypeList}" />
+              </apex:selectList>
+            <p/>
+            
+        
+            <apex:pageBlockSection id="section1" rendered="{!showFields}">
+                
+                <apex:pageBlockSectionItem >
+                    
+                    <apex:outputLabel for="ProjectName" value="Project Name" styleClass="LabelSize required"/>
+                    <apex:inputText id="ProjectName" value="{!p.Project_Name__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel for="PropertyOwnerName" value="Property Owner Name" styleClass="LabelSize required" />
+                    <apex:inputText id="PropertyOwnerName" value="{!p.Property_Owner_Name__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel for="PropertyOwnerCompanyName" value="Property Owner Company Name" styleClass="LabelSize required" />
+                    <apex:inputText id="PropertyOwnerCompanyName" value="{!p.Property_Owner_Company_Name__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel for="PropertyOwnerAddress" value="Property Owner Address" styleClass="LabelSize required" />
+                    <apex:inputText id="PropertyOwnerAddress" value="{!p.Property_Owner_Address__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel for="PropertyOwnerCity" value="Property Owner City" styleClass="LabelSize required" />
+                    <apex:inputText id="PropertyOwnerCity" value="{!p.Property_Owner_City__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel for="PropertyOwnerState" value="Property Owner State" styleClass="LabelSize required" />
+                    <apex:inputText id="PropertyOwnerState" value="{!p.Property_Owner_State__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    
+                    <apex:outputLabel for="PropertyOwnerPostalCode" value="Property Owner Postal Code" styleClass="LabelSize required" />
+                    <apex:inputText id="PropertyOwnerPostalCode" value="{!p.Property_Owner_Postal_Code__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    
+                    <apex:outputLabel for="GeneralContractorName" value="General Contractor Name" styleClass="LabelSize required" />
+                    <apex:inputText id="GeneralContractorName" value="{!p.General_Contractor_Name__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    
+                    <apex:outputLabel for="GeneralContractorCompanyName" value="General Contractor Company Name" styleClass="LabelSize required" />
+                    <apex:inputText id="GeneralContractorCompanyName" value="{!p.General_Contractor_Company_Name__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    
+                    <apex:outputLabel for="GeneralContractorAddress" value="General Contractor Address" styleClass="LabelSize required" />
+                    <apex:inputText id="GeneralContractorAddress" value="{!p.General_Contractor_Address__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    
+                    <apex:outputLabel for="GeneralContractorCity" value="General Contractor City" styleClass="LabelSize required" />
+                    <apex:inputText id="GeneralContractorCity" value="{!p.General_Contractor_City__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    
+                    <apex:outputLabel for="GeneralContractorState" value="General Contractor State" styleClass="LabelSize required" />
+                    <apex:inputText id="GeneralContractorState" value="{!p.General_Contractor_State__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+                <br/>
+                <apex:pageBlockSectionItem >
+                    
+                    <apex:outputLabel for="GeneralContractorPostalCode" value="General Contractor Postal Code" styleClass="LabelSize required" />
+                    <apex:inputText id="GeneralContractorPostalCode" value="{!p.General_Contractor_Postal_Code__c}" required="true"/>
+                    
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+        </apex:actionRegion>
+         
+
+        <apex:outputLabel for="siteOccupied" value="Is this site an occupied/residential site?" styleClass="fieldLabel required" />
+        <p class="grayDescription">Are there people that live on site? If yes, we will still monitor and call authorities but the audible alarms will be disabled.</p>
+        <apex:selectList id="siteOccupied" value="{!p.Occupied__c}" size="1">
+            <apex:selectOption itemValue="" itemLabel="" value="{!null}" />
+            <apex:selectOption itemLabel="No" itemValue="false" />
+            <apex:selectOption itemLabel="Yes" itemValue="true" />
+        </apex:selectList>
+        <p />
+
+        <apex:outputLabel for="contractExpirationDate" value="Contract Expiration Date" styleClass="fieldLabel" />
+        <!-- was Estimated Project Completion Date -->
+        <p class="grayDescription">Contract Expiration Date per the Service Agreement</p>
+        <!-- was When will your project be done? -->
+        <apex:outputText id="contractExpirationDate" value="{0,date,MM/dd/yyyy}">
+            <apex:param value="{!p.Contract_Expiration_Date__c}" />
+        </apex:outputText>
+        <p />
+
+        <apex:outputLabel for="siteAddress" value="Site Address" styleClass="fieldLabel required" />
+        <p class="grayDescription">Include APT, Bldg, or Unit number on this line</p>
+        <apex:inputText id="siteAddress" value="{!p.Shipping_Street__c}" />
+        <p />
+
+        <apex:outputLabel for="siteCity" value="Site City" styleClass="fieldLabel required" />
+        <p class="grayDescription" />
+        <apex:inputText id="siteCity" value="{!p.Shipping_City__c}" />
+        <p />
+
+        <apex:outputLabel for="siteState" value="Site State" styleClass="fieldLabel required" />
+        <p class="grayDescription" />
+        <apex:selectList id="siteState" value="{!p.Shipping_State__c}" size="1">
+            <apex:selectOptions value="{!stateList}" />
+        </apex:selectList>
+        <p />
+
+        <apex:outputLabel for="siteZipCode" value="Site Zip Code" styleClass="fieldLabel required" />
+        <p class="grayDescription" />
+        <apex:inputText id="siteZipCode" value="{!p.Shipping_PostalCode__c}" />
+        <p />
+
+        <apex:outputLabel for="siteTimeZone" value="Site Time Zone" styleClass="fieldLabel required" />
+        <p class="grayDescription">Your cameras are displayed with your site's time zone.</p>
+        <apex:selectList id="siteTimeZone" value="{!p.Time_Zone__c}" size="1">
+            <apex:selectOption itemValue="" itemLabel="" value="{!null}" />
+            <apex:selectOption itemLabel="CT" itemValue="CT" />
+            <apex:selectOption itemLabel="ET" itemValue="ET" />
+            <apex:selectOption itemLabel="MT" itemValue="MT" />
+            <apex:selectOption itemLabel="MT-AZ" itemValue="MT-AZ" />
+            <apex:selectOption itemLabel="PT" itemValue="PT" />
+            <apex:selectOption itemLabel="BST" itemValue="BST" />
+        </apex:selectList>
+        <p />
+
+        <p />
+        
+        
+        <apex:commandButton styleClass="pvButton" value="Back" action="{!previousPage}"
+                status="ajaxStatus" reRender="theForm,errorMessage" />
+        <apex:commandButton styleClass="pvButton" value="Continue >>" action="{!nextPage}"
+                status="ajaxStatus" reRender="theForm,errorMessage" />
+        
+        
+        <p />
+    
+    </apex:pageBlock>
+
+</apex:outputPanel>
+
+<!-- STEP 3 -->
+
+<apex:outputPanel id="step3" layout="block" 
+            styleClass="instructions" rendered="{!view=3}" >
+
+    <apex:pageBlock id="pageBlock3" title="Information about handling activities & outages on your site" >
+        
+        <apex:outputLabel for="officehours" value="What are your business hours for service related visits?" styleClass="fieldLabel required" />
+        <p class="grayDescription">You will enter office hours here which will be useful for fields services </p>
+        <apex:inputText id="officehours" value="{!p.Customer_Office_Hours__c}" />
+        <p/>
+        
+        <apex:outputLabel for="PrimaryContact" value="Primary Contact" styleClass="fieldLabel required" />
+        <p class="grayDescription">Please enter the primary contact responsible for this site</p>
+        <apex:inputText id="PrimaryContact"  value="{!p.Primary_Contact__c}" />
+        <p/>
+        
+        <apex:outputLabel for="Whatisbeingmonitored" value="What is being monitored?" styleClass="fieldLabel required" />
+        <p class="grayDescription">Please enter description of what is being monitored</p>
+        <apex:inputText id="Whatisbeingmonitored" value="{!p.What_is_being_monitored__c}" />
+        <p/>
+                     
+        <apex:outputLabel for="emailForReporting" value="E-Mail Address for Reporting Activity / Outages (multiple is ok)" styleClass="fieldLabel required" />
+        <p class="grayDescription">Separate multiple addresses with a comma. This will be the email used to send videos of activities on your site and all other communications including power/unit outages.</p>
+        <apex:inputText id="emailForReporting" value="{!p.Activity_Email__c}" />
+        <p />
+
+        <apex:outputLabel for="notifyViaEmail" value="Notify me via email every time a unit is armed or disarmed" styleClass="fieldLabel required" />
+        <p class="grayDescription">We will notify the Activity Email specified above to notify you when your site is armed or disarmed.</p>
+        <apex:selectList id="notifyViaEmail" 
+                value="{!p.Notifiy_via_email_on_arm_or_disarm__c}" size="1">
+            <apex:selectOption itemValue="" itemLabel="" value="{!null}" />
+            <apex:selectOption itemLabel="No" itemValue="false" />
+            <apex:selectOption itemLabel="Yes" itemValue="true" />
+        </apex:selectList>
+        <p />
+
+        <apex:outputLabel for="notifyMethod" value="Outage Notification Method" styleClass="fieldLabel required" />
+        <p class="grayDescription" />
+        <apex:selectList id="notifyMethod" 
+                value="{!p.Outage_Notification_Method__c}" size="1">
+            <apex:selectOptions value="{!notifyMethodList}" />
+        </apex:selectList>
+        <p />
+
+        <apex:outputLabel for="cellForMessages" value="Cell Number for SMS Text Message Outages" styleClass="fieldLabel" />
+        <p class="grayDescription">How do you want to be contacted if your unit goes down?</p>
+        <apex:inputText id="cellForMessages" value="{!p.Activity_SMS__c}" />
+        <p />
+
+        <apex:outputLabel for="username" value="Username" styleClass="fieldLabel required" />
+        <p class="grayDescription">Username</p>
+        <apex:inputText id="username" value="{!p.Username__c}" />
+        <p />
+
+        <apex:outputLabel for="password" value="Password" styleClass="fieldLabel" />
+        <p class="grayDescription">Password</p>
+        <apex:inputSecret id="password" value="{!p.Password__c}" />
+        <p />
+
+        <apex:outputLabel for="specialInstructions" value="Are there any special maintenance instructions for your site?" styleClass="fieldLabel" />
+        <p class="grayDescription">i.e. Techs must attend safety course, site closed after 3pm, call to schedule visit</p>
+        <apex:inputTextArea id="specialInstructions" rows="8" cols="62"
+            value="{!p.Maintenance_Instructions__c}" />
+        <p />
+
+        <p />
+        <apex:commandButton styleClass="pvButton" value="Back" action="{!previousPage}"
+                status="ajaxStatus" reRender="theForm,errorMessage" />
+        <apex:commandButton styleClass="pvButton" value="Continue >>" action="{!nextPage}"
+                status="ajaxStatus" reRender="theForm,errorMessage" />
+    </apex:pageBlock>
+
+</apex:outputPanel>
+
+<!-- STEP 4 -->
+
+<apex:outputPanel id="step4" layout="block" 
+            styleClass="instructions" rendered="{!view=4}" >
+
+    <apex:pageBlock id="pageBlock4" title="Billing Information">
+
+        <apex:outputLabel for="billingContact" value="Billing Contact" styleClass="fieldLabel required" />
+        <p class="grayDescription">First and last name</p>
+        <apex:inputText id="billingContact" value="{!p.Billing_Contact_Name__c}" />
+        <p />
+
+        <apex:outputLabel for="billingPhone" value="Billing Phone" styleClass="fieldLabel required" />
+        <p class="grayDescription">(xxx) xxx-xxxx</p>
+        <apex:inputText id="billingPhone" value="{!p.Billing_Phone__c}" />
+        <p />
+
+        <apex:outputLabel for="billingEmail" value="Billing email" styleClass="fieldLabel required" />
+        <p class="grayDescription">Your accounts payable email</p>
+        <apex:inputText id="billingEmail" value="{!p.Billing_Contact_Email__c}" />
+        <p />
+
+        <apex:outputLabel for="purchaseOrderNbr" value="Purchase Order Number or Billing Code" styleClass="fieldLabel required" />
+        <p class="grayDescription">If not one, please use the jobsite name</p>
+        <apex:inputText id="purchaseOrderNbr" value="{!p.Purchase_Order_Number__c}" />
+        <p />
+        
+         <apex:outputLabel for="State of Incorporation" value="State of Incorporation" styleClass="fieldLabel required" />
+        <p class="grayDescription" />
+        <apex:selectList id="stateofincorporation" value="{!p.State_of_Incorporation__c}" size="1">
+            <apex:selectOptions value="{!stateList1}" />
+        </apex:selectList>
+        <p />
+        
+        <apex:outputLabel for="federalidno" value="Federal ID no" styleClass="fieldLabel required" />
+        <p class="grayDescription">You will enter Federal ID details here</p>
+        <apex:inputText id="federalidno" value="{!p.Federal_ID_No__c}" />
+        <p/>
+
+        <apex:outputLabel for="invoiceMethod" value="Invoice Delivery Method" styleClass="fieldLabel required" />
+        <p class="grayDescription">Help us save trees!</p>
+        <apex:selectList id="invoiceMethod" 
+                value="{!p.Invoice_Delivery_Method__c}" size="1">
+            <apex:selectOption itemValue="" itemLabel="" value="{!null}" />
+            <apex:selectOption itemLabel="Email" itemValue="Email" />
+            <apex:selectOption itemLabel="Mail" itemValue="Mail" />
+        </apex:selectList>
+        <p />
+
+        <apex:outputLabel for="taxExempt" value="Tax Exempt" styleClass="fieldLabel required" />
+        <p class="grayDescription">Please fax a copy of the tax exemption to 866-616-1319 or you will be responsible for sales tax.</p>
+        <apex:selectList id="taxExempt" value="{!p.Tax_Exempt__c}" size="1">
+            <apex:selectOption itemLabel="Yes" itemValue="Yes" />
+            <apex:selectOption itemLabel="No" itemValue="No" />
+        </apex:selectList>
+        <p />
+
+        <apex:outputLabel for="billingAddress" value="Billing Address" styleClass="fieldLabel required" />
+        <p class="grayDescription">Include APT, Bldg, or Unit number on this line</p>
+        <apex:inputText id="billingAddress" value="{!p.Billing_Street__c}" />
+        <p />
+
+        <apex:outputLabel for="billingCity" value="Billing City" styleClass="fieldLabel required" />
+        <p class="grayDescription" />
+        <apex:inputText id="siteCity" value="{!p.Billing_City__c}" />
+        <p />
+
+        <apex:outputLabel for="billingState" value="Billing State" styleClass="fieldLabel required" />
+        <p class="grayDescription" />
+        <apex:selectList id="billingState" value="{!p.Billing_State__c}" size="1">
+            <apex:selectOptions value="{!stateList}" />
+        </apex:selectList>
+        <p />
+
+        <apex:outputLabel for="billingZipCode" value="Billing Zip Code" styleClass="fieldLabel required" />
+        <p class="grayDescription" />
+        <apex:inputText id="billingZipCode" value="{!p.Billing_Postal_Code__c}" />
+        <p />
+
+        <p />
+        <apex:commandButton styleClass="pvButton" value="Back" action="{!previousPage}"
+                status="ajaxStatus" reRender="theForm,errorMessage" />
+        <apex:commandButton styleClass="pvButton" value="Continue >>" action="{!nextPage}"
+                status="ajaxStatus" reRender="theForm,errorMessage" />
+    </apex:pageBlock>
+
+</apex:outputPanel>
+
+<!-- STEP 5 -->
+
+<apex:outputPanel id="step5" layout="block" 
+            styleClass="instructions" rendered="{!view=5}" >
+
+    <apex:pageBlock id="pageBlock5" title="Monitoring Information">
+
+        <apex:outputLabel for="secondSecurity" value="Do you have any secondary security services we should be aware of?" styleClass="fieldLabel required" />
+        <p class="grayDescription" >If so, please let us know by choosing from the list below. If not, please choose ‘None’.</p>
+        <apex:selectList id="secondSecurity" 
+                value="{!p.Secondary_Security_SSS__c}" size="1">
+            <apex:selectOptions value="{!secondarySecurityList}" />
+        </apex:selectList>
+        <p />
+
+        <apex:outputLabel for="sssContact" value="What is the secondary security service's contact name and dispatch number?" styleClass="fieldLabel" />
+        <p class="grayDescription">By default, this will be the first person we call for any incident prior to the 1st emergency contact.</p>
+        <apex:inputText id="sssContact" value="{!p.SSS_Contact__c}" />
+        <p />
+
+        <apex:outputLabel for="crossSt1" value="Cross Street 1" styleClass="fieldLabel required" />
+        <p class="grayDescription">Used for dispatching the police</p>
+        <apex:inputText id="crossSt1" value="{!p.Cross_Street_1__c}" />
+        <p />
+
+        <apex:outputLabel for="crossSt2" value="Cross Street 2" styleClass="fieldLabel required" />
+        <p class="grayDescription">Used for dispatching the police</p>
+        <apex:inputText id="crossSt2" value="{!p.Cross_Street_2__c}" />
+        <p />
+
+        <apex:outputLabel for="firstEmergency" value="1st Emergency Contact" styleClass="fieldLabel required" />
+        <p class="grayDescription">Name &amp; Phone Number - users will be authorized to modify monitoring options.</p>
+        <apex:inputText id="firstEmergency" value="{!p.X1st_Emergency_Contact__c}" />
+        <p />
+
+        <apex:outputLabel for="secondEmergency" value="2nd Emergency Contact" styleClass="fieldLabel required" />
+        <p class="grayDescription">Name &amp; Phone Number - users will be authorized to modify monitoring options.</p>
+        <apex:inputText id="secondEmergency" value="{!p.X2nd_Emergency_Contact__c}" />
+        <p />
+
+        <apex:outputLabel for="localPoliceNbr" value="Local Police Number" styleClass="fieldLabel required" />
+        <p class="grayDescription">Non-Emergency Number (not 911 or an 800 number)</p>
+        <apex:inputText id="localPoliceNbr" value="{!p.Local_Police__c}" />
+        <p />
+
+        <apex:outputLabel for="localPoliceDept" value="Local Police Dept. Name" styleClass="fieldLabel required" />
+        <p class="grayDescription">Ex. 'Harris County Sheriff's Office' or 'Los Angeles Police Department'</p>
+        <apex:inputText id="localPoliceDept" value="{!p.Police_Department_Name__c}" />
+        <p />
+
+        <apex:outputLabel for="contactMe" value="Contact me before the authorities" styleClass="fieldLabel required" />
+        <p class="grayDescription">Dispatch operators will use discretion where this option is used.</p>
+        <apex:selectList id="contactMe" value="{!p.Contact_Owner__c}" size="1">
+            <apex:selectOption itemLabel="Yes" itemValue="Yes" />
+            <apex:selectOption itemLabel="No" itemValue="No" />
+        </apex:selectList>
+        <p />
+
+        <apex:outputLabel for="safeWord" value="Safe Word or Site Password (must contain a word & 2 numbers)" styleClass="fieldLabel required" />
+        <p class="grayDescription">No spaces or caps. e.g. baby123 - Anyone entering the site during monitoring hours will need this to disable monitoring or make changes to the account.</p>
+        <apex:inputText id="safeWord" value="{!p.Safe_Word__c}" />
+        <p />
+
+        <apex:outputLabel for="gateCode" value="Gate Code To Site" styleClass="fieldLabel" />
+        <p class="grayDescription">Used for authorities to enter site.</p>
+        <apex:inputText id="gateCode" value="{!p.Gate_Code__c}" />
+        <p />
+
+        <apex:outputLabel for="briefDescription" value="Please give us a brief description of the site" styleClass="fieldLabel required" />
+        <p class="grayDescription">Essential assets, prior problems, and information on the layout of the site is helpful.</p>
+        <apex:inputTextArea id="briefDescription" value="{!p.Site_Description__c}" 
+                rows="8" cols="62"/>
+        <p />
+
+        <p />
+        <apex:commandButton styleClass="pvButton" value="Back" action="{!previousPage}"
+                status="ajaxStatus" reRender="theForm,errorMessage" />
+        <apex:commandButton styleClass="pvButton blueButton" value="Submit" action="{!submit}"
+                status="ajaxStatus" reRender="theForm,errorMessage" />
+<!--
+        <apex:commandButton styleClass="pvButton" value="Continue >>" action="{!nextPage}"
+                status="ajaxStatus" reRender="theForm,errorMessage" />
+-->
+    </apex:pageBlock>
+
+</apex:outputPanel>
+
+<!-- STEP 6 -->
+<!--
+<apex:outputPanel id="step6" layout="block" 
+            styleClass="instructions" rendered="{!view=6}" >
+By selecting any of these services, you are agreeing to add these to your account and follow the terms set forth in the service agreement. The service agreement may not reflect these selections if it was executed prior to completing this form.<br />
+    <apex:pageBlock id="pageBlock6" title="Additional Services">
+
+        <apex:outputLabel for="timeLapse" value="Would you like a Time-Lapse video of your project?" styleClass="fieldLabel required" />
+        <p class="grayDescription">For $138 per month, we will take HD images each hour and create a video at the end of your project.</p>
+        <apex:selectList id="timeLapse" value="{!p.Time_Lapse__c}" size="1">
+            <apex:selectOptions value="{!timeLapseList}" />
+        </apex:selectList>
+        <p />
+ 
+        <apex:outputLabel for="HDPanTiltZoomCamera" value="Would you like an HD Pan Tilt Zoom camera?" styleClass="fieldLabel required" />
+        <p class="grayDescription">For $249 per month, you can view your site in high definition and steer your camera from your phone or PC.</p>
+        <apex:selectList id="HDPanTiltZoomCamera" value="{!p.HD_Pan_Tilt_Zoom_Camera__c}" size="1">
+            <apex:selectOptions value="{!zoomCameraList}" />
+        </apex:selectList>
+        <p />
+ 
+        <apex:outputLabel for="weekendCoverage" value="Weekend Day Time Coverage" styleClass="fieldLabel required" />
+        <p class="grayDescription">Weekend days are optional. Please choose a weekend monitoring option.</p>
+        <apex:selectList id="weekendCoverage" value="{!p.Weekend_Day_Time_Coverage__c}" size="1">
+            <apex:selectOptions value="{!weekendCoverageList}" />
+        </apex:selectList>
+        <p />
+ 
+        <apex:outputLabel for="protectionPlan" value="Would you like the Guaranteed Protection Plan?" styleClass="fieldLabel required" />
+        <p class="grayDescription">We guarantee up to $5,000 per incident for theft or vandalism that we miss.</p>
+        <apex:selectList id="protectionPlan" value="{!p.Protection_Plan__c}" size="1">
+            <apex:selectOptions value="{!protectionPlanList}" />
+        </apex:selectList>
+        <p />
+ 
+        <apex:outputLabel for="motionSolarLight" value="Motion activated solar lights around your site" styleClass="fieldLabel required" />
+        <p class="grayDescription">$99/month installed and maintained. Will help extend the range of cameras and serve as an additional deterrent.</p>
+        <apex:selectList id="motionSolarLight" value="{!p.Motion_Solar_Light__c}" size="1">
+            <apex:selectOptions value="{!solarLightList}" />
+        </apex:selectList>
+        <p />
+
+        <p />
+        <apex:commandButton styleClass="pvButton" value="Back" action="{!previousPage}"
+                status="ajaxStatus" reRender="theForm,errorMessage" />
+        <apex:commandButton styleClass="pvButton blueButton" value="Submit" action="{!submit}"
+                status="ajaxStatus" reRender="theForm,errorMessage" />
+    </apex:pageBlock>
+
+</apex:outputPanel>
+-->
+
+<!-- STEP 7 -->
+
+<apex:outputPanel id="ThankYou" layout="block" 
+            styleClass="instructions" rendered="{!view=6}" >
+    <p>Thank you for completing the Pre-Installation Questionnaire.  Make sure that you have sent your signed contract back to your sales representative or you can fax it to 866-616-1319.</p>
+    <p><apex:outputText value="{!monitoringHours}" escape="false" /></p>
+    <p><apex:outputText value="{!accountManager}" escape="false" /></p>
+    <p>Give us a call if you have any additional questions 866-616-1318.</p>
+</apex:outputPanel>
+
+
+<script type="text/javascript">
+    //var ctrl = document.getElementById( '{!$Component.theForm.iSeriesContactPageBlock.iSeriesContactSection.newFirstNameSI.newFirstName}' );
+</script>
+
+</apex:form>
+
+</apex:page>

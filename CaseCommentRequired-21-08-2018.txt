@@ -1,0 +1,5 @@
+trigger CaseCommentRequired on CaseComment (before insert) {
+    if(Trigger.isInsert && Trigger.isBefore){
+        CaseCommentRequiredOnCase.caseCommentsRequiredOnStatusChanges(Trigger.new);
+    }
+}

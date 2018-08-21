@@ -1,0 +1,75 @@
+public class CaseHandledByUsers {
+    
+    public static void CasesHandledBy(List<Case> newList){
+        //CaseHandledByUser__c [] chu = new  CaseHandledByUser__c[0];
+        List<CaseHandledByUser__c> chu = new List<CaseHandledByUser__c>();
+        List<CaseHandledByUser__c> clist = [SELECT Case_Number__c,Case_Handled_By_User__c,CaseHandledDate__c from CaseHandledByUser__c 
+                                            where Case_Handled_By_User__c =:UserInfo.getName() Order By CaseHandledDate__c desc limit 100];
+        
+        System.debug('Clist values:'+clist); 
+        User u = [select id, name from user where  id = :UserInfo.getUserId()]; 
+        
+        for(Case c2: newList){ 
+            if(clist.isEmpty()){
+                chu.add(new CaseHandledByUser__c(Case_Handled_By_User__c = u.name, Case_Number__c = c2.caseNumber, 
+                                                 CaseHandledDate__c = c2.CaseHandledDate__c, Case__c = c2.Id));    
+            } 
+            
+            if(!clist.isEmpty()){ 
+                for(CaseHandledByUser__c c3: clist){
+                    Boolean found = false;
+                    for(Integer i =0; i< clist.size(); i++){
+                        
+                        String myCaseNumber2 = String.valueOf(c2.caseNumber);
+                        //Date d1 = DateTime.valueOf(c2.CaseHandledDate__c).date();
+                        //d1 == clist[i].CaseHandledDate__c.date()
+                        //c3.CaseHandledDate__c = clist[i].CaseHandledDate__c;
+                        //system.debug('**'+c3.CaseHandledDate__c);
+                        
+                        if(myCaseNumber2.Equals(clist[i].Case_Number__c)){
+                            c3.Case_Number__c = clist[i].Case_Number__c;
+                            system.debug('**'+c3.Case_Number__c);
+                            found=true;
+                            break;
+                        } 
+                    } 
+                    if(!found){
+                        chu.add(new CaseHandledByUser__c(Case_Handled_By_User__c = u.name, Case_Number__c = c2.caseNumber, 
+                                                         CaseHandledDate__c = c2.CaseHandledDate__c,Case__c = c2.Id)); 
+                    } 
+                    if(found){
+                        if(c2.caseNumber == c3.Case_Number__c){
+                            if(c3.Case_Handled_By_User__c.equals(u.Name)){
+                                system.debug('***'+c2.CaseHandledDate__c+'***'+c3.CaseHandledDate__c);
+                                if(c2.CaseHandledDate__c.date() != c3.CaseHandledDate__c.date() ){
+                                    chu.add(new CaseHandledByUser__c(Case_Handled_By_User__c = u.name, Case_Number__c = c2.caseNumber, 
+                                                                     CaseHandledDate__c = c2.CaseHandledDate__c, Case__c = c2.Id)); 
+                                }
+                            } 
+                        }
+                        if(c2.caseNumber == c3.Case_Number__c){
+                            if(!c3.Case_Handled_By_User__c.equals(u.Name)){
+                                chu.add(new CaseHandledByUser__c(Case_Handled_By_User__c = u.name, Case_Number__c = c2.caseNumber, 
+                                                                 CaseHandledDate__c = c2.CaseHandledDate__c, Case__c = c2.Id)); 
+                            }
+                        }
+                    }
+                    break; 
+                }
+            }
+        }
+        
+        Map<id,CaseHandledByUser__c> csmap = new Map<id,CaseHandledByUser__c>();
+        csmap.putAll(chu);
+        
+        if(csmap.size() > 0){
+            insert csmap.values();
+            system.debug(csmap.size()+'Cases created sucessfully:'+csmap.values());
+        }
+        
+        /*if(!chu.isEmpty()){
+            system.debug('****'+chu);
+            insert chu;
+        }*/
+    }
+}

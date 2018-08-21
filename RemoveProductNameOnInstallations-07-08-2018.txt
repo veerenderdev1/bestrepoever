@@ -1,0 +1,8 @@
+trigger RemoveProductNameOnInstallations on OpportunityLineItem (After delete) {
+    if(Trigger.isDelete && Trigger.isAfter){
+        UpdateProductNameOnInstallations.removeProductName(Trigger.old);
+        system.debug('OpportunityLineItem Trigger called:*****');
+        OpportunityUpdater.removeProductName(Trigger.old);
+        UpdateTotalCostOfProducts.removeFirstMonthFree(Trigger.old);
+    }
+}

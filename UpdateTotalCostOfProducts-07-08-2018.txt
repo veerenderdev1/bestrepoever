@@ -1,0 +1,120 @@
+public class UpdateTotalCostOfProducts {
+    public static void updateTotalCostOfInventoryProducts(List<Opportunity> newList){
+        
+        Set<Id> allOppIds = new Set<Id>();
+        for(Opportunity opp : newList) {
+            allOppIds.add(opp.ID);
+        }
+        
+        List<Opportunity> oppList = [SELECT Id, Name, First_Month_Free__c, Total_Cost_Of_Products__c, (SELECT Id, Product2.name, UnitPrice, Quantity, Discount__c, NetSuite_Item_Number__c
+                                                                                            FROM OpportunityLineItems) 
+                                     FROM Opportunity WHERE Id=:allOppIds];
+        
+        system.debug('Opportunity List:'+oppList);
+        List<Product_Cost__c> ipList = [SELECT Purchase_Price__c, Total__c, Netsuite_Item_Number__c, Name from Product_Cost__c];
+        
+        system.debug('Products List:'+ipList);
+        
+        List<opportunity> updateOpp = new List<Opportunity>();
+        Decimal sum = 0.0;
+        Decimal Temp = 0.0;
+        
+        for(Opportunity oppty: newList){
+            for(Opportunity o: oppList){
+                system.debug('Opportunity :'+o);
+                for(OpportunityLineItem ol: o.OpportunityLineItems){
+                    system.debug('Opportunity Line Items:'+ol);
+                    if(ol.UnitPrice > 0 ){
+                        system.debug('Product Name::'+ol.Product2.name);  
+                        
+                        //Code Modified for First Month Free Product which is part of BEP Calculations
+                        if(ol.Product2.Name.contains('First Month Free') && oppty.First_Month_Free__c == False){
+                            oppty.First_Month_Free__c = True;
+                        }
+                        
+                        for(Product_Cost__c ip: ipList){
+                            if(ol.NetSuite_Item_Number__c == ip.Netsuite_Item_Number__c){
+                                system.debug('******'+ip.Total__c);
+                                Temp = ip.Total__c * ol.Quantity;
+                                system.debug('******'+Temp);
+                                sum += Temp;
+                                system.debug('******'+sum);
+                                oppty.Total_Cost_Of_Products__c = sum;
+                                system.debug('******'+oppty.Total_Cost_Of_Products__c);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    public static void updateWirelessAllowances(List<Opportunity> newList){
+        
+        Set<Id> allOppIds = new Set<Id>();
+        for(Opportunity opp : newList) {
+            allOppIds.add(opp.ID);
+        }
+        
+        List<Opportunity> oppList = [SELECT Id, Name, Wireless_Allowances__c, (SELECT Id, Product2.name, UnitPrice, Quantity
+                                                                               FROM OpportunityLineItems) 
+                                     FROM Opportunity WHERE Id=:allOppIds];
+        Decimal total = 0.0;
+        for(Opportunity op: newList){
+            for(Opportunity o: oppList){
+                for(OpportunityLineItem li: o.OpportunityLineItems){
+                    if(li.Product2.Name.Contains('Cat5e') && li.UnitPrice > 0){
+                        system.debug('******'+li.product2.Name);
+                        total = li.UnitPrice * li.Quantity; 
+                        system.debug('******'+total);
+                        op.Wireless_Allowances__c = total;
+                        system.debug('******'+op.Wireless_Allowances__c);
+                    }
+                }
+            }
+        }
+    }
+    
+    public static void removeFirstMonthFree(List<OpportunityLineItem> newList){
+        system.debug('Called from OpportunityLineItem Trigger::::');
+        
+        Set<Id> OppId2 = new Set<Id>();
+        
+        //Get the OpportunityID related to the OpportunityLineItems
+        system.debug('****'+newList);
+        for(OpportunityLineItem oli : newList) {
+            OppId2.add(oli.OpportunityId);
+            system.debug('****'+OppId2);
+        }         
+        
+        //Retrieve all the OpportunityLineItems records related to the Opportunity
+        List<Opportunity> oppList = [SELECT Id, Name, First_Month_Free__c, Total_Cost_Of_Products__c, 
+                                     (SELECT Id, Product2.name
+                                      FROM OpportunityLineItems)
+                                     FROM Opportunity WHERE Id=:OppId2]; 
+        
+        
+        List<Opportunity> UpdateOpp = new List<Opportunity>();
+        
+        //Loop through all records to find out the product name contains 'First Month Free'
+        for(Opportunity o: oppList){
+            for(OpportunityLineItem li: o.OpportunityLineItems){
+                system.debug('*******'+li.Product2.Name);
+                
+                 if(!li.Product2.Name.contains('First Month Free') && o.First_Month_Free__c == True){
+                    system.debug('****');
+                    o.First_Month_Free__c = False;
+                    UpdateOpp.add(o);  
+                }
+                break;
+            }
+        }
+        
+        Map<id,Opportunity> opmap = new Map<id,Opportunity>();
+        opmap.putAll(UpdateOpp);
+        
+        if(opmap.size() > 0){ 
+            Update opmap.values();
+            system.debug(opmap.size()+'Opportunity Updated sucessfully:'+opmap.values());
+        }
+    }
+}

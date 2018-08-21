@@ -1,0 +1,54 @@
+public with sharing class caseController 
+{
+    public Case cs {get;set;}    
+    
+    public caseController(ApexPages.StandardController controller) 
+    {
+         
+        cs = (Case)controller.getRecord();
+        
+        cs = new Case();
+        cs.ownerid= Userinfo.getUserId();
+        cs.RecordTypeid = Apexpages.currentPage().getParameters().get('RecordType');
+        //cs.Id = ApexPages.currentPage().getParameters().get('Id');
+        //get lookup parameters..
+        //string installationid = Apexpages.currentPage().getParameters().get('installationId');
+        string unitId         = Apexpages.currentPage().getParameters().get('CF00No000000CbwFp_lkid');
+        string installationId = Apexpages.currentPage().getParameters().get('CF00No000000CcAO5_lkid');
+        string accountid      = Apexpages.currentPage().getParameters().get('def_account_id');
+        
+        if(installationid != null && installationid != '')
+            cs.Installation__c = installationid;
+        if(unitId != null && unitId != '')
+            cs.Unit__c = unitId;
+        if(accountid != null && accountid != '')
+            cs.accountid= accountid;
+    }
+    
+    public void autoPopup()
+    {
+        if(cs.Unit__c != null )
+        {
+            list<Installation__c> installations = [SELECT id,Site__c from Installation__c where Unit__c =:cs.Unit__c and Status__c = '2-Installed' limit 1];
+            if(!installations.isEmpty())
+            {
+                cs.Installation__c = installations[0].id;
+                if(installations[0].Site__c != null)
+                {
+                    cs.AccountId = installations[0].Site__c;
+                    list<contact> cons = [Select id from Contact where accountid=:cs.AccountId];
+                    if(!cons.isEmpty())
+                        cs.Contactid = cons[0].id;
+                }
+            }
+            
+        }
+    }
+   
+    public pageReference dosave()
+    {
+        insert cs;
+        return new pageReference('/'+cs.id).setRedirect(true);        
+    }
+    
+}

@@ -1,0 +1,145 @@
+@isTest
+private class UpdateTotalCostOfProductsTest {
+    
+    @isTest
+    private static void updateTotalCostOfProductsTestMethod(){
+        
+        String orgId = Userinfo.getOrganizationID();        
+        String uniqueEmail = 'test@' + orgId + '.net.test';
+        User u1 = new User( Alias = 'TST'
+                           , CommunityNickname = 'TST'
+                           , Email = uniqueEmail
+                           , EmailEncodingKey = 'UTF-8'
+                           , LastName = 'Testing'
+                           , LanguageLocaleKey = 'en_US'
+                           , LocaleSidKey = 'en_US'
+                           , Profile = new Profile( Name = '#Custom: Sales Management' )
+                           , TimezoneSidKey = 'America/Los_Angeles'
+                           , UserName = uniqueEmail );
+        insert u1;
+        
+        String uniqueEmail2 = 'test2@' + orgId + '.net.test';
+        User u2 = new User( Alias = 'TST2'
+                           , CommunityNickname = 'TST2'
+                           , Email = uniqueEmail2
+                           , EmailEncodingKey = 'UTF-8'
+                           , LastName = 'Testing2'
+                           , LanguageLocaleKey = 'en_US'
+                           , LocaleSidKey = 'en_US'
+                           , Profile = new Profile( Name = '#Custom: Sales Management' )
+                           , TimezoneSidKey = 'America/Los_Angeles'
+                           , UserName = uniqueEmail2 );
+        insert u2;
+        
+        
+        
+        Account a = new Account();
+        a.Name = 'SGI Test One Account';
+        insert a;
+        
+        AccountTeamMember m1 = new AccountTeamMember();
+        m1.AccountId = a.ID;
+        m1.TeamMemberRole = 'Field Services';
+        m1.UserId = u1.ID;
+        insert m1;
+        
+        AccountTeamMember m2 = new AccountTeamMember();
+        m2.AccountId = a.ID;
+        m2.TeamMemberRole = 'Account Manager';
+        m2.UserId = u2.ID;
+        insert m2;
+        
+        Product2 newProd = new Product2(Name = 'Test1', Netsuite_Item_Number__c = '111', family = 'test family');
+        insert newProd;
+         
+        Product2 newProd1 = new Product2(Name = 'Test2', Netsuite_Item_Number__c = '222', family = 'test family');
+        insert newProd1;
+        
+        Product2 newProd2 = new Product2(Name = 'Cat5e Per Foot', Netsuite_Item_Number__c = '333', family = 'test family');
+        insert newProd2;
+        
+        Id priceBook2Id = Test.getStandardPricebookId();
+        
+        PriceBookEntry pbEntry = new PriceBookEntry(
+            UnitPrice = 100,
+            PriceBook2Id = priceBook2Id,
+            Product2Id = newProd.Id,
+            IsActive = true);
+        insert pbEntry ;
+        
+        PriceBookEntry pbEntry2 = new PriceBookEntry(
+            UnitPrice = 200,
+            PriceBook2Id = priceBook2Id,
+            Product2Id = newProd1.Id,
+            IsActive = true);
+        insert pbEntry2;
+        
+        PriceBookEntry pbEntry3 = new PriceBookEntry(
+            UnitPrice = 300,
+            PriceBook2Id = priceBook2Id,
+            Product2Id = newProd2.Id,
+            IsActive = true);
+        insert pbEntry3;
+        
+        Pricebook2 customPB = new Pricebook2(Name='Custom Pricebook', isActive=true);
+        insert customPB;
+        
+ 
+        Opportunity o = new Opportunity();
+        o.AccountID = a.ID;
+        o.Name = 'SGI Test Oppty';
+        o.StageName = '01-Discovery';  
+        o.CloseDate = Date.today();
+        o.PriceBook2 = customPB;
+        o.Contract_Expiration_Date__c = Date.today();
+        o.Billing_Schedule__c = 'Monthly';
+        o.Payment_Terms__c = 'NET 15';
+        o.Total_Cost_Of_Products__c = null;
+        o.Wireless_Allowances__c = null;
+        insert o; 
+        
+        Product_Cost__c p1 = new Product_Cost__c();
+        p1.Purchase_Price__c = 20;
+        p1.Netsuite_Item_Number__c = '111';
+        p1.Total__c = 100.00;
+        p1.Name = 'Test1';
+        insert p1;
+        
+        Product_Cost__c p2 = new Product_Cost__c();
+        p2.Purchase_Price__c = 30;
+        p2.Netsuite_Item_Number__c = '222';
+        p2.Total__c = 200.00;
+        p2.Name = 'Test2';
+        insert p2;
+        
+        Product_Cost__c p3 = new Product_Cost__c();
+        p3.Purchase_Price__c = 40;
+        p3.Netsuite_Item_Number__c = '333';
+        p3.Total__c = 50.00;
+        p3.Name = 'Cat5e Per Foot';
+        insert p3;
+         
+        
+        OpportunityLineItem oppLine1 = new OpportunityLineItem(pricebookentryid = pbEntry.Id, 
+                                                               UnitPrice = 2000, Quantity = 2, Discount__c = 0.0, OpportunityID = o.Id);
+        insert oppLine1;
+        
+        OpportunityLineItem oppLine2 = new OpportunityLineItem(pricebookentryid = pbEntry2.Id, 
+                                                               UnitPrice = 3000, Quantity = 3, Discount__c = 0.0, OpportunityID = o.Id);
+        insert oppLine2; 
+        
+        OpportunityLineItem oppLine3 = new OpportunityLineItem(pricebookentryid = pbEntry3.Id, 
+                                                               UnitPrice = 10, Quantity = 3, Discount__c = 0.0, OpportunityID = o.Id);
+        insert oppLine3; 
+         
+        o.StageName = '15-Quote';   
+        update o;
+        
+        Opportunity op=[select id, Total_Cost_Of_Products__c, Wireless_Allowances__c from Opportunity where id=:o.id];
+
+        System.assertEquals(op.Total_Cost_Of_Products__c, 950.00);
+        System.assertEquals(op.Wireless_Allowances__c, 30.00);
+        
+    } 
+
+}

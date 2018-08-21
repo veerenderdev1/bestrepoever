@@ -1,0 +1,6 @@
+trigger RemoveProductNameOnInstallations on OpportunityLineItem (After delete) {
+    if(Trigger.isDelete && Trigger.isAfter){
+        UpdateProductNameOnInstallations.removeProductName(Trigger.old);
+        OpportunityUpdater.removeProductName(Trigger.old);
+    }
+}

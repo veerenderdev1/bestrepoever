@@ -1,0 +1,29 @@
+public class CaseCommentRequiredOnCase {
+    
+    public static void caseCommentsRequiredOnStatusChanges(List<CaseComment> newList){
+        
+        try{
+            Map<Id,CaseComment> cMap = new Map<Id,CaseComment>();
+            
+            for (CaseComment t: newList) {
+                cMap.put(t.ParentId,t);   
+            }
+            
+            Set<Id> idSet = cMap.keySet();
+            Map<Id,Case> casesToUpdate = new Map<Id,Case>();
+            
+            for(Case c : [select Id, CaseCommentRequired__c from Case where Id in :idSet]) {
+                if(c.CaseCommentRequired__c == True) {
+                    c.CaseCommentRequired__c = False;
+                    casesToUpdate.put(c.id,c);
+                }
+            }
+            if (casesToUpdate.size() > 0) {
+                update casesToUpdate.values();
+            }
+        }
+        catch(Exception e){
+            System.debug('Exceptio Occured...'+e.getMessage());
+        }
+    }
+}

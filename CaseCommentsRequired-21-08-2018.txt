@@ -1,0 +1,22 @@
+public class CaseCommentsRequired {
+    
+    public static void checkCaseStatus(List<Case> newList, Map<id,Case> oldlist){
+        
+        try{
+            for(Case cs : newList){
+                
+                if(cs.Status != oldlist.get(cs.id).Status && cs.CaseCommentRequired__c == True){
+                    cs.addError('Case Comments required whenever Case status changes');
+                } 
+                
+                if(cs.OwnerID != oldlist.get(cs.id).OwnerID && cs.CaseCommentRequired__c == True){
+                    cs.addError('Case Comments required whenever Case Owner changes');
+                }
+            }
+        }
+        catch(Exception e){
+            System.debug('Exception Occured...'+e.getMessage());
+            
+        }
+    }
+}
